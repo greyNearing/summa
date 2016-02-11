@@ -383,6 +383,7 @@ contains
  subroutine alloc_bvar(err,message)
  ! used to initialize structure components for model variables
  USE data_struc,only:bvar_data,bvar_meta             ! data structures
+ USE get_ixname_module,only:get_varTypeName                ! string names of different data types for error message
  implicit none
  ! dummy variables
  integer(i4b),intent(out)             :: err         ! error code
@@ -409,11 +410,11 @@ contains
  ! initialize third-level data structures
  do iVar=1,nVar
   select case(bvar_meta(ivar)%vartype)
-   case('scalarv'); allocate(bvar_data%var(ivar)%dat(1),stat=err)
-   case('routing'); allocate(bvar_data%var(ivar)%dat(nTimeDelay),stat=err)
+   case(1); allocate(bvar_data%var(ivar)%dat(1),stat=err)          ! scalarv
+   case(9); allocate(bvar_data%var(ivar)%dat(nTimeDelay),stat=err) ! routing
    case default
     err=40; message=trim(message)//"unknownVariableType[name='"//trim(bvar_meta(ivar)%varname)//"'; &
-                                   &type='"//trim(bvar_meta(ivar)%vartype)//"']"; return
+                                   &type='"//trim(get_varTypeName(bvar_meta(ivar)%vartype))//"']"; return
   endselect
   bvar_data%var(ivar)%dat(:) = missingDouble
  end do ! (looping through model variables)

@@ -33,6 +33,9 @@ public::get_ixMvar
 public::get_ixIndex
 public::get_ixBpar
 public::get_ixBvar
+public::get_ixVarType
+public::get_varTypeName
+public::put_ncid
 contains
 
  ! *******************************************************************************************************************
@@ -713,6 +716,110 @@ contains
    get_ixbvar = imiss
  endselect
  end function get_ixbvar
+
+
+ ! *******************************************************************************************************************
+ ! public function get_ixVarType: get the index of the named variable type
+ ! *******************************************************************************************************************
+ function get_ixVarType(varType)
+ USE var_lookup,only:iLookVarType                    ! indices of the named variable types
+ implicit none
+ ! define dummy variables
+ character(*), intent(in) :: varType                 ! variable type name
+ integer(i4b)             :: get_ixVarType          ! index of the named variable type list
+ ! define local variables
+ integer(i4b), parameter  :: imiss = -999            ! missing value
+ ! get the index of the named variables
+ select case(trim(varType))
+  case('scalarv'); get_ixVarType = iLookVarType%scalarv
+  case('wLength'); get_ixVarType = iLookVarType%wLength
+  case('midSnow'); get_ixVarType = iLookVarType%midSnow
+  case('midSoil'); get_ixVarType = iLookVarType%midSoil
+  case('midToto'); get_ixVarType = iLookVarType%midToto
+  case('ifcSnow'); get_ixVarType = iLookVarType%ifcSnow
+  case('ifcSoil'); get_ixVarType = iLookVarType%ifcSoil
+  case('ifcToto'); get_ixVarType = iLookVarType%ifcToto
+  case('routing'); get_ixVarType = iLookVarType%routing
+  ! get to here if cannot find the variable
+  case default
+   get_ixVarType = imiss
+ endselect
+ end function get_ixVarType
+
+
+ ! *******************************************************************************************************************
+ ! public function get_varTypeName: get the index of the named variable type
+ ! *******************************************************************************************************************
+ function get_varTypeName(varType)
+ USE var_lookup,only:iLookVarType                    ! indices of the named variable types
+ implicit none
+ ! define dummy variables
+ integer(i4b), intent(in) :: varType                 ! variable type name
+ character(LEN=7)         :: get_varTypeName         ! index of the named variable type list
+ ! get the index of the named variables
+ select case(varType)
+  case(iLookVarType%scalarv);get_varTypeName='scalarv'
+  case(iLookVarType%wLength);get_varTypeName='wLength'
+  case(iLookVarType%midSnow);get_varTypeName='midSnow'
+  case(iLookVarType%midSoil);get_varTypeName='midSoil'
+  case(iLookVarType%midToto);get_varTypeName='midToto'
+  case(iLookVarType%ifcSnow);get_varTypeName='ifcSnow'
+  case(iLookVarType%ifcSoil);get_varTypeName='ifcSoil'
+  case(iLookVarType%ifcToto);get_varTypeName='ifcToto'
+  case(iLookVarType%routing);get_varTypeName='routing'
+  ! get to here if cannot find the variable
+  case default
+   get_VarTypeName = 'unknown'
+ endselect
+ end function get_VarTypeName
+
+
+ ! *******************************************************************************************************************
+ ! public function put_ncid: assign netcdf variable id for a specific varaible of unknown type
+ ! *******************************************************************************************************************
+ subroutine put_ncid(varName,ncid,err,message)
+  USE data_struc,only:attr_meta ! attributes meta structure
+  USE data_struc,only:type_meta ! type decs meta structure
+  USE data_struc,only:mpar_meta ! model parameters meta structure
+  USE data_struc,only:bpar_meta ! basin parameters meta structure
+  USE data_struc,only:forc_meta ! forcing variables meta structure
+  USE data_struc,only:indx_meta ! index variables meta structure
+  USE data_struc,only:mvar_meta ! model variables meta structure
+  USE data_struc,only:bvar_meta ! basin variablesmeta structure
+  implicit none
+  ! dummy vars
+  character(*), intent(in)        :: varName       ! variable name input 
+  integer(i4b), intent(in)        :: ncid          ! netcdf variable id
+  integer(i4b), intent(out)       :: err           ! error
+  character(LEN=256), intent(out) :: message ! error message
+  ! local vars
+  integer(i4b)                    :: vDex          ! index in structure
+  ! initialize error message
+  err=0; message='put_ncid/'
+  ! do nothign if the ncid is missing
+  if (ncid.lt.0) return  
+  ! try all structures
+  vDex = get_ixAttr  (trim(varName))
+  if (vDex.gt.0) then; attr_meta(vDex)%ncid = ncid; return; endif;
+  vDex = get_ixType  (trim(varName))
+  if (vDex.gt.0) then; type_meta(vDex)%ncid = ncid; return; endif;
+  vDex = get_ixParam (trim(varName))
+  if (vDex.gt.0) then; mpar_meta(vDex)%ncid = ncid; return; endif;
+  vDex = get_ixBpar  (trim(varName))
+  if (vDex.gt.0) then; bpar_meta(vDex)%ncid = ncid; return; endif;
+  vDex = get_ixForce (trim(varName))
+  if (vDex.gt.0) then; forc_meta(vDex)%ncid = ncid; return; endif;
+  vDex = get_ixIndex (trim(varName))
+  if (vDex.gt.0) then; indx_meta(vDex)%ncid = ncid; return; endif;
+  vDex = get_ixMvar  (trim(varName))
+  if (vDex.gt.0) then; mvar_meta(vDex)%ncid = ncid; return; endif;
+  vDex = get_ixBvar  (trim(varName))
+  if (vDex.gt.0) then; bvar_meta(vDex)%ncid = ncid; return; endif;
+  ! if we get this far then the variable was not found
+  err=20 
+  message=trim(message)//'variable not found='
+  message=trim(message)//trim(varName) 
+ end subroutine put_ncid
 
 
 end module get_ixname_module
