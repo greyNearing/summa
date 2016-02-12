@@ -68,7 +68,6 @@ contains
  USE data_struc,only:ix_soil,ix_snow               ! named variables to describe the type of layer
  USE var_lookup,only:iLookMVAR,iLookPARAM,iLookINDEX ! named variables to describe structure elements
  USE get_ixname_module,only:get_ixmvar,get_ixindex ! access function to find index of elements in structure
- USE get_ixname_module,only:get_varTypeName                ! string names of different data types for error message
  implicit none
  ! define output
  integer(i4b),intent(out)       :: err             ! error code
@@ -195,17 +194,17 @@ contains
  ! (loop through model variables)
  do ivar=1,size(mvar_meta)
   select case(mvar_meta(ivar)%vartype)
-   case(1); allocate(mvar_data%var(ivar)%dat(1),stat=err)         ! scalarv
-   case(2); allocate(mvar_data%var(ivar)%dat(nBand),stat=err)     ! wLength
-   case(3); allocate(mvar_data%var(ivar)%dat(nSnow),stat=err)     ! midSnow
-   case(4); allocate(mvar_data%var(ivar)%dat(nSoil),stat=err)     ! midSoil
-   case(5); allocate(mvar_data%var(ivar)%dat(nLayers),stat=err)   ! midToto
-   case(6); allocate(mvar_data%var(ivar)%dat(0:nSnow),stat=err)   ! ifcSnow
-   case(7); allocate(mvar_data%var(ivar)%dat(0:nSoil),stat=err)   ! ifcSoil
-   case(8); allocate(mvar_data%var(ivar)%dat(0:nLayers),stat=err) ! ifcToto
+   case('scalarv'); allocate(mvar_data%var(ivar)%dat(1),stat=err)
+   case('wLength'); allocate(mvar_data%var(ivar)%dat(nBand),stat=err)
+   case('midSnow'); allocate(mvar_data%var(ivar)%dat(nSnow),stat=err)
+   case('midSoil'); allocate(mvar_data%var(ivar)%dat(nSoil),stat=err)
+   case('midToto'); allocate(mvar_data%var(ivar)%dat(nLayers),stat=err)
+   case('ifcSnow'); allocate(mvar_data%var(ivar)%dat(0:nSnow),stat=err)
+   case('ifcSoil'); allocate(mvar_data%var(ivar)%dat(0:nSoil),stat=err)
+   case('ifcToto'); allocate(mvar_data%var(ivar)%dat(0:nLayers),stat=err)
    case default
     err=40; message=trim(message)//"unknownVariableType[name='"//trim(mvar_meta(ivar)%varname)//"'; &
-                                   &type='"//trim(get_varTypeName(mvar_meta(ivar)%vartype))//"']"; return
+                                   &type='"//trim(mvar_meta(ivar)%vartype)//"']"; return
   endselect
   if(err/=0)then;err=30;message=trim(message)//"problemAllocate[var='"//trim(mvar_meta(ivar)%varname)//"']"; return; endif
   ! fill data with missing values
@@ -214,11 +213,11 @@ contains
  ! (loop through model indices)
  do ivar=1,size(indx_meta)
   select case(indx_meta(ivar)%vartype)
-   case(1); allocate(indx_data%var(ivar)%dat(1),stat=err)       ! scalarv
-   case(5); allocate(indx_data%var(ivar)%dat(nLayers),stat=err) ! midToto
+   case('scalarv'); allocate(indx_data%var(ivar)%dat(1),stat=err)
+   case('midToto'); allocate(indx_data%var(ivar)%dat(nLayers),stat=err)
    case default
     err=40; message=trim(message)//"unknownVariableType[name='"//trim(indx_meta(ivar)%varname)//"'; &
-                                   &type='"//trim(get_varTypeName(indx_meta(ivar)%vartype))//"']"; return
+                                   &type='"//trim(indx_meta(ivar)%vartype)//"']"; return
   endselect
   if(err/=0)then;err=30;message=trim(message)//"problemAllocate[var='"//trim(indx_meta(ivar)%varname)//"']"; return; endif
   ! fill data with missing values
@@ -347,13 +346,13 @@ contains
     jvar = get_ixmvar(trim(varnames(ivar)))
     if(jvar<=0)then; err=40; message=trim(message)//"cannotFindVariableIndex[name='"//trim(varnames(ivar))//"']"; return; endif
     ! ***** populate the data variable *****
-    select case(mvar_meta(jvar)%vartype)
-     case(3); if(layerType==ix_snow) read(chardata(ivar),*,iostat=err) mvar_data%var(jvar)%dat(iSnow)  ! midSnow
-     case(4); if(layerType==ix_soil) read(chardata(ivar),*,iostat=err) mvar_data%var(jvar)%dat(iSoil)  ! midSoil
-     case(5); read(chardata(ivar),*,iostat=err) mvar_data%var(jvar)%dat(iToto)                         ! midToto
-     case(6); read(chardata(ivar),*,iostat=err) mvar_data%var(jvar)%dat(iSnow-1)  ! IC = top interface ! ifcSnow
-     case(7); read(chardata(ivar),*,iostat=err) mvar_data%var(jvar)%dat(iSoil-1)  ! IC = top interface ! ifcSoil
-     case(8); read(chardata(ivar),*,iostat=err) mvar_data%var(jvar)%dat(iToto-1)  ! IC = top interface ! ifcToto
+    select case(trim(mvar_meta(jvar)%vartype))
+     case('midSoil'); if(layerType==ix_soil) read(chardata(ivar),*,iostat=err) mvar_data%var(jvar)%dat(iSoil)
+     case('midSnow'); if(layerType==ix_snow) read(chardata(ivar),*,iostat=err) mvar_data%var(jvar)%dat(iSnow)
+     case('midToto'); read(chardata(ivar),*,iostat=err) mvar_data%var(jvar)%dat(iToto)
+     case('ifcSnow'); read(chardata(ivar),*,iostat=err) mvar_data%var(jvar)%dat(iSnow-1)  ! IC = top interface
+     case('ifcSoil'); read(chardata(ivar),*,iostat=err) mvar_data%var(jvar)%dat(iSoil-1)  ! IC = top interface
+     case('ifcToto'); read(chardata(ivar),*,iostat=err) mvar_data%var(jvar)%dat(iToto-1)  ! IC = top interface
      case default
      err=40; message=trim(message)//"unknownInitCondType[name='"//trim(mvar_meta(jvar)%varname)//"']"; return
     endselect

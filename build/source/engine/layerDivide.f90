@@ -415,11 +415,11 @@ contains
  do ivar=1,size(mvar_data%var)
 
   ! define bounds
-  select case(mvar_meta(ivar)%vartype)
-   case(3); ix_lower=1; ix_upper=nSnow    ! midSnow
-   case(5); ix_lower=1; ix_upper=nLayers  ! midToto
-   case(6); ix_lower=0; ix_upper=nSnow    ! ifcSnow
-   case(8); ix_lower=0; ix_upper=nLayers  ! ifcToto
+  select case(trim(mvar_meta(ivar)%vartype))
+   case('midSnow'); ix_lower=1; ix_upper=nSnow
+   case('midToto'); ix_lower=1; ix_upper=nLayers
+   case('ifcSnow'); ix_lower=0; ix_upper=nSnow
+   case('ifcToto'); ix_lower=0; ix_upper=nLayers
    case default; cycle
   end select
 

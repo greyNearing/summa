@@ -121,15 +121,15 @@ contains
  ! **********************************************************************************************************
  do ivar=1,size(mvar_meta)
   if (.not.mvar_meta(ivar)%v_write) cycle
-  select case(mvar_meta(ivar)%vartype)
-   case(1); call def_variab(trim(infile),(/hru_DimName,Timestep_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)                  ! scalarv
-   case(2); call def_variab(trim(infile),(/hru_DimName,wLength_DimName,Timestep_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)  ! wLength
-   case(3); call def_variab(trim(infile),(/hru_DimName,midSnowAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)            ! midSnow
-   case(4); call def_variab(trim(infile),(/hru_DimName,midSoilAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)            ! midSoil
-   case(5); call def_variab(trim(infile),(/hru_DimName,midTotoAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)            ! midToto
-   case(6); call def_variab(trim(infile),(/hru_DimName,ifcSnowAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)            ! ifcSnow
-   case(7); call def_variab(trim(infile),(/hru_DimName,ifcSoilAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)            ! ifcSoil
-   case(8); call def_variab(trim(infile),(/hru_DimName,ifcTotoAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)            ! ifcToto
+  select case(trim(mvar_meta(ivar)%vartype))
+   case('scalarv'); call def_variab(trim(infile),(/hru_DimName,Timestep_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)
+   case('wLength'); call def_variab(trim(infile),(/hru_DimName,wLength_DimName,Timestep_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)
+   case('midSnow'); call def_variab(trim(infile),(/hru_DimName,midSnowAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)
+   case('midSoil'); call def_variab(trim(infile),(/hru_DimName,midSoilAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)
+   case('midToto'); call def_variab(trim(infile),(/hru_DimName,midTotoAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)
+   case('ifcSnow'); call def_variab(trim(infile),(/hru_DimName,ifcSnowAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)
+   case('ifcSoil'); call def_variab(trim(infile),(/hru_DimName,ifcSoilAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)
+   case('ifcToto'); call def_variab(trim(infile),(/hru_DimName,ifcTotoAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)
    case default; err=35; message=trim(message)//"varTypeNotFound"; return
   endselect
   ! check variable definition was OK
@@ -140,9 +140,9 @@ contains
  ! **********************************************************************************************************
  do ivar=1,size(indx_meta)
   if (.not.indx_meta(ivar)%v_write) cycle
-  select case(indx_meta(ivar)%vartype)
-   case(1); call def_variab(trim(infile),(/hru_DimName,Timestep_DimName/),indx_meta(ivar),nf90_int,err,cmessage)       ! scalarv
-   case(5); call def_variab(trim(infile),(/hru_DimName,midTotoAndTime_DimName/),indx_meta(ivar),nf90_int,err,cmessage) ! midToto
+  select case(trim(indx_meta(ivar)%vartype))
+   case('scalarv'); call def_variab(trim(infile),(/hru_DimName,Timestep_DimName/),indx_meta(ivar),nf90_int,err,cmessage)
+   case('midToto'); call def_variab(trim(infile),(/hru_DimName,midTotoAndTime_DimName/),indx_meta(ivar),nf90_int,err,cmessage)
    case default; err=35; message=trim(message)//"varTypeNotFound"; return
   endselect
   ! check variable definition was OK
@@ -153,9 +153,9 @@ contains
  ! **********************************************************************************************************
  do ivar=1,size(bvar_meta)
   if (.not.bvar_meta(ivar)%v_write) cycle
-  select case(bvar_meta(ivar)%vartype)
-   case(1); call def_variab(trim(infile),(/Timestep_DimName/),bvar_meta(ivar),nf90_double,err,cmessage)  ! scalarv
-   case(9); call def_variab(trim(infile),(/routing_DimName/), bvar_meta(ivar),nf90_double,err,cmessage)  ! routing
+  select case(trim(bvar_meta(ivar)%vartype))
+   case('scalarv'); call def_variab(trim(infile),(/Timestep_DimName/),bvar_meta(ivar),nf90_double,err,cmessage)
+   case('routing'); call def_variab(trim(infile),(/routing_DimName/), bvar_meta(ivar),nf90_double,err,cmessage)
    case default; err=35; message=trim(message)//"varTypeNotFound"; return
   endselect
   ! check variable definition was OK
@@ -278,9 +278,8 @@ contains
  ! put the attribute
  err = nf90_put_att(ncid,nf90_global,trim(attname),trim(attvalue))
  call netcdf_err(err,message); if (err/=0) return
- ! end definition phase
- err = nf90_enddef(ncid); call netcdf_err(err,message); if (err/=0) return
  ! close output file
+ err = nf90_enddef(ncid); call netcdf_err(err,message); if (err/=0) return
  err = nf90_close(ncid); call netcdf_err(err,message); if (err/=0) return
  end subroutine put_attrib
 
@@ -289,8 +288,7 @@ contains
  ! private subroutine def_variab: define variables
  ! **********************************************************************************************************
  subroutine def_variab(infile,dimNames,metadata,ivtype,err,message)
- USE data_struc,only:var_info              ! derived type for metadata
- USE get_ixname_module,only:put_ncid       ! stores the netcdf id number for later retrieval
+ USE data_struc,only:var_info                              ! derived type for metadata
  implicit none
  ! declare dummy variables
  character(*), intent(in)   :: infile      ! filename
@@ -308,7 +306,8 @@ contains
  err=0;message="f-defVariab/"//trim(metadata%varname)//"/"
 
  ! open NetCDF file
- err = nf90_open(infile,nf90_write,ncid); call netcdf_err(err,message); if (err/=0) return
+ err = nf90_open(infile,nf90_write,ncid)
+ call netcdf_err(err,message); if (err/=0) return
  ! allow re-definition of variables
  err = nf90_redef(ncid); call netcdf_err(err,message); if (err/=0) return
 
@@ -327,12 +326,8 @@ contains
  err = nf90_put_att(ncid,iVarId,'units',trim(metadata%varunit))
  call netcdf_err(err,message); if (err/=0) return
 
- ! store netcdf varID in meta structure so that we do not need to inquire every time
- call put_ncid(metadata%varname,iVarID,err,message); if (err/=0) return
- 
- ! end definition phase
- err = nf90_enddef(ncid); call netcdf_err(err,message); if (err/=0) return
  ! close output file
+ err = nf90_enddef(ncid); call netcdf_err(err,message); if (err/=0) return
  err = nf90_close(ncid); call netcdf_err(err,message); if (err/=0) return
  end subroutine def_variab
 

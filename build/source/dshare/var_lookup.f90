@@ -560,21 +560,6 @@ MODULE var_lookup
  endtype iLook_bvar
 
  ! ***********************************************************************************************************
- ! (9) structure for looking up the type of a model variable (this is only needed for backward compatability, and should be removed eventually)
- ! ***********************************************************************************************************
- type, public :: iLook_varType
-  integer(i4b)    :: scalarv   =  1 ! scalar variables 
-  integer(i4b)    :: wLength   =  2 ! 
-  integer(i4b)    :: midSnow   =  3 ! mid-layer snow variables
-  integer(i4b)    :: midSoil   =  4 ! mid-layer soil variables 
-  integer(i4b)    :: midToto   =  5 ! mid-layer, both snow and soil
-  integer(i4b)    :: ifcSnow   =  6 ! interface snow variables
-  integer(i4b)    :: ifcSoil   =  7 ! interface soil variables
-  integer(i4b)    :: ifcToto   =  8 ! interface, snow and soil
-  integer(i4b)    :: routing   =  9 ! routing variables
- endtype iLook_varType
-
- ! ***********************************************************************************************************
  ! (X) define data structures and maximum number of variables of each type
  ! ***********************************************************************************************************
  ! define look-up structures
@@ -626,8 +611,6 @@ MODULE var_lookup
  type(iLook_bpar),    public,parameter :: iLookBPAR     =ilook_bpar    (  1,  2,  3,  4,  5)
  type(iLook_bvar),    public,parameter :: iLookBVAR     =ilook_bvar    (  1,  2,  3,  4,  5,  6,  7,  8,  9, 10,&
                                                                          11)
- type(iLook_varType), public,parameter :: iLookVarType  =ilook_varType (  1,  2,  3,  4,  5,  6,  7,  8,  9)
-
  ! define maximum number of variables of each type
  integer(i4b),parameter,public :: maxvarDecisions= 38
  integer(i4b),parameter,public :: maxvarTime     = 5
