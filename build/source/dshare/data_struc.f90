@@ -67,9 +67,10 @@ MODULE data_struc
  ! define derived type for model variables, including name, decription, and units
  type,public :: var_info
   character(len=64)                      :: varname=''               ! variable name
-  CHARACTER(len=128)                     :: vardesc=''               ! variable description
+  character(len=128)                     :: vardesc=''               ! variable description
   character(len=64)                      :: varunit=''               ! variable units
-  character(len=32)                      :: vartype=''               ! variable type (scalar, model layers, etc.)
+  integer(i4b)                           :: vartype=1                ! variable type (1=scalar,2=wLength,3=midSnow,4=midSoil,5=midToto,6=ifcSnow,7=ifcSoil,8=ifcToto,9=routing)
+  integer(i4b)                           :: ncid=-999                ! netcdf variable id 
   logical(lgt)                           :: v_write=.FALSE.          ! flag to write variable to the output file
  endtype var_info
  ! define arrays of metadata

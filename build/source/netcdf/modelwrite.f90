@@ -48,7 +48,6 @@ contains
  ! local variables
  integer(i4b)                :: ncid                       ! NetCDF file ID
  integer(i4b)                :: iVar                       ! loop through variables
- integer(i4b)                :: iVarId                     ! variable ID
  ! initialize error control
  err=0;message="f-writeAttrb/"
 
@@ -62,11 +61,8 @@ contains
   if (.not.attr_meta(iVar)%v_write) cycle
   ! initialize message
   message=trim(message)//trim(attr_meta(iVar)%varname)//'/'
-  ! get variable ID
-  err = nf90_inq_varid(ncid,trim(attr_meta(iVar)%varname),iVarId)
-  call netcdf_err(err,message); if (err/=0) return
   ! write data
-  err = nf90_put_var(ncid,iVarId,(/attr_data%var(iVar)/),start=(/iHRU/),count=(/1/))
+  err = nf90_put_var(ncid,attr_meta(iVar)%ncid,(/attr_data%var(iVar)/),start=(/iHRU/),count=(/1/))
   call netcdf_err(err,message); if (err/=0) return
   ! re-initialize message
   message="f-writeAttrb/"
@@ -78,11 +74,8 @@ contains
   if (.not.type_meta(iVar)%v_write) cycle
   ! initialize message
   message=trim(message)//trim(type_meta(iVar)%varname)//'/'
-  ! get variable ID
-  err = nf90_inq_varid(ncid,trim(type_meta(iVar)%varname),iVarId)
-  call netcdf_err(err,message); if (err/=0) return
   ! write data
-  err = nf90_put_var(ncid,iVarId,(/type_data%var(iVar)/),start=(/iHRU/),count=(/1/))
+  err = nf90_put_var(ncid,type_meta(iVar)%ncid,(/type_data%var(iVar)/),start=(/iHRU/),count=(/1/))
   call netcdf_err(err,message); if (err/=0) return
   ! re-initialize message
   message="f-writeAttrb/"
@@ -108,7 +101,6 @@ contains
  ! local variables
  integer(i4b)                :: ncid                       ! NetCDF file ID
  integer(i4b)                :: ipar                       ! loop through model parameters
- integer(i4b)                :: iVarId                     ! variable ID
  ! initialize error control
  err=0;message="f-writeParam/"
 
@@ -122,11 +114,8 @@ contains
   if (.not.mpar_meta(ipar)%v_write) cycle
   ! initialize message
   message=trim(message)//trim(mpar_meta(ipar)%varname)//'/'
-  ! get variable ID
-  err = nf90_inq_varid(ncid,trim(mpar_meta(ipar)%varname),iVarId)
-  call netcdf_err(err,message); if (err/=0) return
   ! write data
-  err = nf90_put_var(ncid,iVarId,(/mpar_data%var(ipar)/),start=(/iHRU/),count=(/1/))
+  err = nf90_put_var(ncid,mpar_meta(ipar)%ncid,(/mpar_data%var(ipar)/),start=(/iHRU/),count=(/1/))
   call netcdf_err(err,message); if (err/=0) return
   ! re-initialize message
   message="f-writeParam/"
@@ -138,11 +127,8 @@ contains
   if (.not.bpar_meta(ipar)%v_write) cycle
   ! initialize message
   message=trim(message)//trim(bpar_meta(ipar)%varname)//'/'
-  ! get variable ID
-  err = nf90_inq_varid(ncid,trim(bpar_meta(ipar)%varname),iVarId)
-  call netcdf_err(err,message); if (err/=0) return
   ! write data
-  err = nf90_put_var(ncid,iVarId,(/bpar_data%var(ipar)/),start=(/1/),count=(/1/))
+  err = nf90_put_var(ncid,bpar_meta(ipar)%ncid,(/bpar_data%var(ipar)/),start=(/1/),count=(/1/))
   call netcdf_err(err,message); if (err/=0) return
   ! re-initialize message
   message="f-writeParam/"
@@ -171,7 +157,6 @@ contains
  ! local variables
  integer(i4b)                :: ncid                       ! NetCDF file ID
  integer(i4b)                :: iforce                     ! loop through model forcing variables
- integer(i4b)                :: iVarId                     ! variable ID
  ! initialize error control
  err=0;message="f-writeForce/"
 
@@ -186,8 +171,7 @@ contains
  if(iHRU == 1)then
   message=trim(message)//'writeTime/'
   !print*, 'iHRU, istep, dtime = ', iHRU, istep, dtime
-  err = nf90_inq_varid(ncid,'time',iVarId); call netcdf_err(err,message); if (err/=0) return
-  err = nf90_put_var(ncid,iVarId,(/dtime/),start=(/istep/),count=(/1/))
+  err = nf90_put_var(ncid,forc_meta(iLookFORCE%time)%ncid,(/dtime/),start=(/istep/),count=(/1/))
   call netcdf_err(err,message); if (err/=0) return
   message="f-writeForce/"
  endif
@@ -200,11 +184,8 @@ contains
   if (.not.forc_meta(iforce)%v_write) cycle
   ! initialize message
   message=trim(message)//trim(forc_meta(iforce)%varname)//'/'
-  ! get variable ID
-  err = nf90_inq_varid(ncid,trim(forc_meta(iforce)%varname),iVarId)
-  call netcdf_err(err,message); if (err/=0) return
   ! write data
-  err = nf90_put_var(ncid,iVarId,(/forc_data%var(iforce)/),start=(/iHRU,istep/),count=(/1,1/))
+  err = nf90_put_var(ncid,forc_meta(iforce)%ncid,(/forc_data%var(iforce)/),start=(/iHRU,istep/),count=(/1,1/))
   call netcdf_err(err,message); if (err/=0) return
  end do  ! looping through forcing data variables
 
@@ -220,6 +201,7 @@ contains
  USE data_struc,only:indx_data,indx_meta                   ! index data structures
  USE data_struc,only:mvar_data,mvar_meta                   ! model data structures
  USE var_lookup,only:iLookINDEX                            ! identifies element of the index structure
+ USE get_ixname_module,only:get_varTypeName                ! string names of different data types for error message
  implicit none
  ! declare dummy variables
  character(*), intent(in)    :: fileout                    ! output file
@@ -241,7 +223,6 @@ contains
  integer(i4b)                :: ncid                       ! NetCDF file ID
  integer(i4b)                :: iindex                     ! loop through model index variables
  integer(i4b)                :: imodel                     ! loop through model variables
- integer(i4b)                :: iVarId                     ! variable ID
  ! initialize error control
  err=0;message="f-writeModel/"
 
@@ -269,11 +250,8 @@ contains
   if (.not.indx_meta(iindex)%v_write) cycle
   ! initialize message
   message=trim(message)//trim(indx_meta(iindex)%varname)//'/'
-  ! get variable ID
-  err = nf90_inq_varid(ncid,trim(indx_meta(iindex)%varname),iVarId)
-  call netcdf_err(err,message); if (err/=0) return
   ! write data
-  err = nf90_put_var(ncid,iVarId,indx_data%var(iindex)%dat,start=(/iHRU,istep/),count=(/1,1/))
+  err = nf90_put_var(ncid,indx_meta(iindex)%ncid,indx_data%var(iindex)%dat,start=(/iHRU,istep/),count=(/1,1/))
   call netcdf_err(err,message); if (err/=0) return
   message="f-writeModel/"
  end do
@@ -285,22 +263,19 @@ contains
   if (.not.mvar_meta(imodel)%v_write) cycle
   ! initialize message
   message=trim(message)//trim(mvar_meta(imodel)%varname)//'/'
-  ! get variable ID
-  err = nf90_inq_varid(ncid,trim(mvar_meta(imodel)%varname),iVarId)
-  call netcdf_err(err,message); if (err/=0) return
   ! write data
-  select case(trim(mvar_meta(imodel)%vartype))
-   case('scalarv'); err = nf90_put_var(ncid,iVarId,mvar_data%var(imodel)%dat,start=(/iHRU,istep/),count=(/1,1/))
-   case('wLength'); err = nf90_put_var(ncid,iVarId,mvar_data%var(imodel)%dat,start=(/iHRU,1,istep/),count=(/1,maxSpectral,1/))
-   case('midSnow'); err = nf90_put_var(ncid,iVarId,mvar_data%var(imodel)%dat,start=(/iHRU,midSnowStartIndex/),count=(/1,nSnow/))
-   case('midSoil'); err = nf90_put_var(ncid,iVarId,mvar_data%var(imodel)%dat,start=(/iHRU,midSoilStartIndex/),count=(/1,nSoil/))
-   case('midToto'); err = nf90_put_var(ncid,iVarId,mvar_data%var(imodel)%dat,start=(/iHRU,midTotoStartIndex/),count=(/1,nLayers/))
-   case('ifcSnow'); err = nf90_put_var(ncid,iVarId,mvar_data%var(imodel)%dat,start=(/iHRU,ifcSnowStartIndex/),count=(/1,nSnow+1/))
-   case('ifcSoil'); err = nf90_put_var(ncid,iVarId,mvar_data%var(imodel)%dat,start=(/iHRU,ifcSoilStartIndex/),count=(/1,nSoil+1/))
-   case('ifcToto'); err = nf90_put_var(ncid,iVarId,mvar_data%var(imodel)%dat,start=(/iHRU,ifcTotoStartIndex/),count=(/1,nLayers+1/))
+  select case(mvar_meta(imodel)%vartype)
+   case(1); err = nf90_put_var(ncid,mvar_meta(imodel)%ncid,mvar_data%var(imodel)%dat,start=(/iHRU,istep/),count=(/1,1/))                     ! scalarv
+   case(2); err = nf90_put_var(ncid,mvar_meta(imodel)%ncid,mvar_data%var(imodel)%dat,start=(/iHRU,1,istep/),count=(/1,maxSpectral,1/))       ! wLength
+   case(3); err = nf90_put_var(ncid,mvar_meta(imodel)%ncid,mvar_data%var(imodel)%dat,start=(/iHRU,midSnowStartIndex/),count=(/1,nSnow/))     ! midSnow
+   case(4); err = nf90_put_var(ncid,mvar_meta(imodel)%ncid,mvar_data%var(imodel)%dat,start=(/iHRU,midSoilStartIndex/),count=(/1,nSoil/))     ! midSoil
+   case(5); err = nf90_put_var(ncid,mvar_meta(imodel)%ncid,mvar_data%var(imodel)%dat,start=(/iHRU,midTotoStartIndex/),count=(/1,nLayers/))   ! midToto
+   case(6); err = nf90_put_var(ncid,mvar_meta(imodel)%ncid,mvar_data%var(imodel)%dat,start=(/iHRU,ifcSnowStartIndex/),count=(/1,nSnow+1/))   ! ifcSnow
+   case(7); err = nf90_put_var(ncid,mvar_meta(imodel)%ncid,mvar_data%var(imodel)%dat,start=(/iHRU,ifcSoilStartIndex/),count=(/1,nSoil+1/))   ! ifcSoil
+   case(8); err = nf90_put_var(ncid,mvar_meta(imodel)%ncid,mvar_data%var(imodel)%dat,start=(/iHRU,ifcTotoStartIndex/),count=(/1,nLayers+1/)) ! ifcToto
    case default
     err=40; message=trim(message)//"unknownVariableType[name='"//trim(mvar_meta(imodel)%varname)//"'; &
-                                   &type='"//trim(mvar_meta(imodel)%vartype)//"']"; return
+                                   &type='"//trim(get_varTypeName(mvar_meta(imodel)%vartype))//"']"; return
   endselect
   call netcdf_err(err,message); if (err/=0) return
   message="f-writeModel/"
@@ -317,6 +292,7 @@ contains
  subroutine writeBasin(fileout,istep,err,message)
  USE data_struc,only:bvar_data,bvar_meta                   ! model data structures
  USE var_lookup,only:iLookINDEX                            ! identifies element of the index structure
+ USE get_ixname_module,only:get_varTypeName                ! string names of different data types for error message
  implicit none
  ! declare dummy variables
  character(*), intent(in)    :: fileout                    ! output file
@@ -326,7 +302,6 @@ contains
  ! local variables
  integer(i4b)                :: ncid                       ! NetCDF file ID
  integer(i4b)                :: imodel                     ! loop through model variables
- integer(i4b)                :: iVarId                     ! variable ID
  ! initialize error control
  err=0;message="f-writeModel/"
 
@@ -341,19 +316,16 @@ contains
   if (.not.bvar_meta(imodel)%v_write) cycle
   ! initialize message
   message=trim(message)//trim(bvar_meta(imodel)%varname)//'/'
-  ! get variable ID
-  err = nf90_inq_varid(ncid,trim(bvar_meta(imodel)%varname),iVarId)
-  call netcdf_err(err,message); if (err/=0) return
   ! write data
-  select case(trim(bvar_meta(imodel)%vartype))
-   case('scalarv'); err = nf90_put_var(ncid,iVarId,bvar_data%var(imodel)%dat,start=(/istep/),count=(/1/))
-   case('routing')
+  select case(bvar_meta(imodel)%vartype)
+   case(1); err = nf90_put_var(ncid,bvar_meta(imodel)%ncid,bvar_data%var(imodel)%dat,start=(/istep/),count=(/1/)) ! scalarv
+   case(9)                                                                                        ! routing
     if(istep==1)then
-     err = nf90_put_var(ncid,iVarId,bvar_data%var(imodel)%dat,start=(/1/),count=(/1000/))
+     err = nf90_put_var(ncid,bvar_meta(imodel)%ncid,bvar_data%var(imodel)%dat,start=(/1/),count=(/1000/))
     endif
    case default
     err=40; message=trim(message)//"unknownVariableType[name='"//trim(bvar_meta(imodel)%varname)//"'; &
-                                   &type='"//trim(bvar_meta(imodel)%vartype)//"']"; return
+                                   &type='"//trim(get_varTypeName(bvar_meta(imodel)%vartype))//"']"; return
   endselect
   call netcdf_err(err,message); if (err/=0) return
   message="f-writeBasin/"
