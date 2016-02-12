@@ -23,8 +23,6 @@ MODULE var_lookup
  USE nrtype
  implicit none
  private
- ! define missing value
- integer(i4b),parameter     :: imiss = -999      ! used to initialize named variables
  ! ***********************************************************************************************************
  ! (0) define model decisions
  ! ***********************************************************************************************************
@@ -575,6 +573,20 @@ MODULE var_lookup
  endtype iLook_varType
 
  ! ***********************************************************************************************************
+ ! (10) structure for looking up statistics 
+ ! ***********************************************************************************************************
+ type, public :: iLook_stat
+  integer(i4b)    :: inst   =  1 ! instantaneous 
+  integer(i4b)    :: mean   =  2 ! mean over period
+  integer(i4b)    :: vari   =  3 ! variance over period
+  integer(i4b)    :: mini   =  4 ! minimum over period 
+  integer(i4b)    :: maxi   =  5 ! maximum over period
+  integer(i4b)    :: mode   =  6 ! mode over period
+  integer(i4b)    :: harm   =  7 ! harmonic mean
+  integer(i4b)    :: geom   =  8 ! geometric mean 
+ endtype iLook_stat
+
+ ! ***********************************************************************************************************
  ! (X) define data structures and maximum number of variables of each type
  ! ***********************************************************************************************************
  ! define look-up structures
@@ -627,6 +639,7 @@ MODULE var_lookup
  type(iLook_bvar),    public,parameter :: iLookBVAR     =ilook_bvar    (  1,  2,  3,  4,  5,  6,  7,  8,  9, 10,&
                                                                          11)
  type(iLook_varType), public,parameter :: iLookVarType  =ilook_varType (  1,  2,  3,  4,  5,  6,  7,  8,  9)
+ type(iLook_stat),    public,parameter :: iLookStat     =ilook_stat    (  1,  2,  3,  4,  5,  6,  7,  8)
 
  ! define maximum number of variables of each type
  integer(i4b),parameter,public :: maxvarDecisions= 38
@@ -639,6 +652,8 @@ MODULE var_lookup
  integer(i4b),parameter,public :: maxvarIndx     = 10
  integer(i4b),parameter,public :: maxvarBpar     = 5
  integer(i4b),parameter,public :: maxvarBvar     = 11
+ integer(i4b),parameter,public :: maxvarTypes    = 9
+ integer(i4b),parameter,public :: maxvarStats    = 8
 
 
 END MODULE var_lookup

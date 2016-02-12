@@ -49,6 +49,9 @@ contains
  USE data_struc,only:bpar_meta,bvar_meta            ! metadata structures
  USE data_struc,only:model_decisions
  USE multiconst,only:integerMissing
+ USE var_lookup,only:iLookVarType                   ! look up for type case select 
+ USE var_lookup,only:iLookSTAT                      ! look up for output variable statistics 
+ USE var_lookup,only:maxvarStats                    ! # of options for output statistics 
  ! declare dummy variables
  integer(i4b), intent(in)    :: nHRU                         ! number of HRUs
  character(*), intent(in)    :: infile                       ! file suffix
@@ -56,6 +59,7 @@ contains
  character(*),intent(out)    :: message                      ! error message
  ! local variables
  integer(i4b)                :: ivar                         ! loop through model variables
+ integer(i4b)                :: istat                        ! loop through statistics
  character(len=256)          :: cmessage                     ! temporary error message
  ! initialize errors
  err=0; message="def_output/"
@@ -77,73 +81,77 @@ contains
  ! ***** define model forcing data
  ! **********************************************************************************************************
  do ivar=1,size(forc_meta)
-  if(.not.forc_meta(ivar)%v_write) cycle
-  if(forc_meta(ivar)%varname == 'time')then
-   call def_variab(trim(infile),(/Timestep_DimName/),forc_meta(ivar),nf90_double,err,cmessage)
-  else
-   call def_variab(trim(infile),(/hru_DimName,Timestep_DimName/),forc_meta(ivar),nf90_double,err,cmessage)
-  endif
-  if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
+  do istat = 1,maxvarStats ! loop through different output statistics
+   if(forc_meta(ivar)%o_freq(istat).le.0) cycle
+   if(forc_meta(ivar)%varname == 'time')then
+    call def_variab(trim(infile),(/Timestep_DimName/),forc_meta(ivar),istat,nf90_double,err,cmessage)
+   else
+    call def_variab(trim(infile),(/hru_DimName,Timestep_DimName/),forc_meta(ivar),istat,nf90_double,err,cmessage)
+   endif
+   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
+  end do ! looping through output statistics
  end do ! looping through forcing variables
  ! **********************************************************************************************************
  ! ***** define local attributes
  ! **********************************************************************************************************
  do ivar=1,size(attr_meta)
-  if (.not.attr_meta(ivar)%v_write) cycle
-  call def_variab(trim(infile),(/hru_DimName/),attr_meta(ivar),nf90_double,err,cmessage)
+  if (attr_meta(ivar)%o_freq(iLookSTAT%inst).le.0) cycle
+  call def_variab(trim(infile),(/hru_DimName/),attr_meta(ivar),iLookSTAT%inst,nf90_double,err,cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
  end do  ! looping through local attributes
  ! **********************************************************************************************************
  ! ***** define local classification of veg, soil, etc.
  ! **********************************************************************************************************
  do ivar=1,size(type_meta)
-  if (.not.type_meta(ivar)%v_write) cycle
-  call def_variab(trim(infile),(/hru_DimName/),type_meta(ivar),nf90_int,err,cmessage)
+  if (type_meta(ivar)%o_freq(iLookSTAT%inst).le.0) cycle
+  call def_variab(trim(infile),(/hru_DimName/),type_meta(ivar),iLookSTAT%inst,nf90_int,err,cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
  end do  ! looping through local classification of veg, soil, etc.
  ! **********************************************************************************************************
  ! ***** define local column model parameters
  ! **********************************************************************************************************
  do ivar=1,size(mpar_meta)
-  if (.not.mpar_meta(ivar)%v_write) cycle
-  call def_variab(trim(infile),(/hru_DimName/),mpar_meta(ivar),nf90_double,err,cmessage)
+  if (mpar_meta(ivar)%o_freq(iLookSTAT%inst).le.0) cycle
+  call def_variab(trim(infile),(/hru_DimName/),mpar_meta(ivar),iLookSTAT%inst,nf90_double,err,cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
  end do  ! looping through model parameters
  ! **********************************************************************************************************
  ! ***** define basin-average model parameters
  ! **********************************************************************************************************
  do ivar=1,size(bpar_meta)
-  if (.not.bpar_meta(ivar)%v_write) cycle
-  call def_variab(trim(infile),(/scalar_DimName/),bpar_meta(ivar),nf90_double,err,cmessage)
+  if (bpar_meta(ivar)%o_freq(iLookSTAT%inst).le.0) cycle
+  call def_variab(trim(infile),(/scalar_DimName/),bpar_meta(ivar),iLookSTAT%inst,nf90_double,err,cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
  end do  ! looping through model parameters
  ! **********************************************************************************************************
  ! ***** define local column model variables -- dimensions depend on the variable type
  ! **********************************************************************************************************
  do ivar=1,size(mvar_meta)
-  if (.not.mvar_meta(ivar)%v_write) cycle
-  select case(mvar_meta(ivar)%vartype)
-   case(1); call def_variab(trim(infile),(/hru_DimName,Timestep_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)                  ! scalarv
-   case(2); call def_variab(trim(infile),(/hru_DimName,wLength_DimName,Timestep_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)  ! wLength
-   case(3); call def_variab(trim(infile),(/hru_DimName,midSnowAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)            ! midSnow
-   case(4); call def_variab(trim(infile),(/hru_DimName,midSoilAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)            ! midSoil
-   case(5); call def_variab(trim(infile),(/hru_DimName,midTotoAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)            ! midToto
-   case(6); call def_variab(trim(infile),(/hru_DimName,ifcSnowAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)            ! ifcSnow
-   case(7); call def_variab(trim(infile),(/hru_DimName,ifcSoilAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)            ! ifcSoil
-   case(8); call def_variab(trim(infile),(/hru_DimName,ifcTotoAndTime_DimName/),mvar_meta(ivar),nf90_double,err,cmessage)            ! ifcToto
-   case default; err=35; message=trim(message)//"varTypeNotFound"; return
-  endselect
-  ! check variable definition was OK
-  if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
+  do istat = 1,maxvarStats ! loop through different output statistics
+   if (mvar_meta(ivar)%o_freq(istat).le.0) cycle
+   select case(mvar_meta(ivar)%vartype)
+    case(iLookVarType%scalarv); call def_variab(trim(infile),(/hru_DimName,Timestep_DimName/),mvar_meta(ivar),istat,nf90_double,err,cmessage)                  ! scalarv
+    case(iLookVarType%wLength); call def_variab(trim(infile),(/hru_DimName,wLength_DimName,Timestep_DimName/),mvar_meta(ivar),istat,nf90_double,err,cmessage)  ! wLength
+    case(iLookVarType%midSnow); call def_variab(trim(infile),(/hru_DimName,midSnowAndTime_DimName/),mvar_meta(ivar),istat,nf90_double,err,cmessage)            ! midSnow
+    case(iLookVarType%midSoil); call def_variab(trim(infile),(/hru_DimName,midSoilAndTime_DimName/),mvar_meta(ivar),istat,nf90_double,err,cmessage)            ! midSoil
+    case(iLookVarType%midToto); call def_variab(trim(infile),(/hru_DimName,midTotoAndTime_DimName/),mvar_meta(ivar),istat,nf90_double,err,cmessage)            ! midToto
+    case(iLookVarType%ifcSnow); call def_variab(trim(infile),(/hru_DimName,ifcSnowAndTime_DimName/),mvar_meta(ivar),istat,nf90_double,err,cmessage)            ! ifcSnow
+    case(iLookVarType%ifcSoil); call def_variab(trim(infile),(/hru_DimName,ifcSoilAndTime_DimName/),mvar_meta(ivar),istat,nf90_double,err,cmessage)            ! ifcSoil
+    case(iLookVarType%ifcToto); call def_variab(trim(infile),(/hru_DimName,ifcTotoAndTime_DimName/),mvar_meta(ivar),istat,nf90_double,err,cmessage)            ! ifcToto
+    case default; err=35; message=trim(message)//"varTypeNotFound"; return
+   endselect
+   ! check variable definition was OK
+   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
+  end do ! looping through output statistics
  end do ! loop through model variables
  ! **********************************************************************************************************
  ! ***** define local column model indices -- dimensions depend on the variable type
  ! **********************************************************************************************************
  do ivar=1,size(indx_meta)
-  if (.not.indx_meta(ivar)%v_write) cycle
+  if (indx_meta(ivar)%o_freq(iLookSTAT%inst).le.0) cycle
   select case(indx_meta(ivar)%vartype)
-   case(1); call def_variab(trim(infile),(/hru_DimName,Timestep_DimName/),indx_meta(ivar),nf90_int,err,cmessage)       ! scalarv
-   case(5); call def_variab(trim(infile),(/hru_DimName,midTotoAndTime_DimName/),indx_meta(ivar),nf90_int,err,cmessage) ! midToto
+   case(iLookVarType%scalarv); call def_variab(trim(infile),(/hru_DimName,Timestep_DimName/),indx_meta(ivar),iLookSTAT%inst,nf90_int,err,cmessage)       ! scalarv
+   case(iLookVarType%midToto); call def_variab(trim(infile),(/hru_DimName,midTotoAndTime_DimName/),indx_meta(ivar),iLookSTAT%inst,nf90_int,err,cmessage) ! midToto
    case default; err=35; message=trim(message)//"varTypeNotFound"; return
   endselect
   ! check variable definition was OK
@@ -152,11 +160,11 @@ contains
  ! **********************************************************************************************************
  ! ***** define local column model variables -- dimensions depend on the variable type
  ! **********************************************************************************************************
- do ivar=1,size(bvar_meta)
-  if (.not.bvar_meta(ivar)%v_write) cycle
+ do ivar=1,size(bvar_meta) ! loop through variables in structure
+  if (bvar_meta(ivar)%o_freq(iLookSTAT%inst).le.0) cycle
   select case(bvar_meta(ivar)%vartype)
-   case(1); call def_variab(trim(infile),(/Timestep_DimName/),bvar_meta(ivar),nf90_double,err,cmessage)  ! scalarv
-   case(9); call def_variab(trim(infile),(/routing_DimName/), bvar_meta(ivar),nf90_double,err,cmessage)  ! routing
+   case(iLookVarType%scalarv); call def_variab(trim(infile),(/Timestep_DimName/),bvar_meta(ivar),iLookSTAT%inst,nf90_double,err,cmessage)  ! scalarv
+   case(iLookVarType%routing); call def_variab(trim(infile),(/routing_DimName/), bvar_meta(ivar),iLookSTAT%inst,nf90_double,err,cmessage)  ! routing
    case default; err=35; message=trim(message)//"varTypeNotFound"; return
   endselect
   ! check variable definition was OK
@@ -282,8 +290,8 @@ contains
  ! **********************************************************************************************************
  ! private subroutine def_variab: define variables
  ! **********************************************************************************************************
- subroutine def_variab(infile,dimNames,metadata,ivtype,err,message)
- USE data_struc,only:ncid               ! ID for netcdf output file 
+ subroutine def_variab(infile,dimNames,metadata,istat,ivtype,err,message)
+ USE data_struc,only:ncid                  ! ID for netcdf output file 
  USE data_struc,only:var_info              ! derived type for metadata
  USE get_ixname_module,only:put_ncVarID    ! stores the netcdf variable id number for later retrieval
  implicit none
@@ -291,6 +299,7 @@ contains
  character(*), intent(in)   :: infile      ! filename
  character(*), intent(in)   :: dimNames(:) ! dimension namess
  type(var_info),intent(in)  :: metadata    ! metadata structure for a given variable
+ integer(i4b),intent(in)    :: istat       ! output statistic type
  integer(i4b),intent(in)    :: ivtype      ! variable type
  integer(i4b),intent(out)   :: err         ! error code
  character(*),intent(out)   :: message     ! error message
@@ -320,7 +329,7 @@ contains
  call netcdf_err(err,message); if (err/=0) return
 
  ! store netcdf varID in meta structure so that we do not need to inquire every time
- call put_ncVarID(metadata%varname,iVarID,err,message); if (err/=0) return
+ call put_ncVarID(metadata%varname,iVarID,istat,err,message); if (err/=0) return
  
  ! end definition phase
  err = nf90_enddef(ncid); call netcdf_err(err,message); if (err/=0) return

@@ -35,6 +35,7 @@ public::get_ixBpar
 public::get_ixBvar
 public::get_ixVarType
 public::get_varTypeName
+public::get_statName
 public::put_ncVarID
 contains
 
@@ -764,9 +765,34 @@ contains
 
 
  ! *******************************************************************************************************************
+ ! public function get_statName: get the name of the output statistics type
+ ! *******************************************************************************************************************
+ function get_statName(istat)
+ USE var_lookup,only:iLookStat    ! indices of the possible output statistics
+ implicit none
+ ! define dummy variables
+ integer(i4b), intent(in) :: istat               ! stat type name
+ character(LEN=4)         :: get_statName        ! index of the named variable type list
+ ! get the index of the named variables
+ select case(istat)
+  case(iLookStat%inst);get_statName='inst'
+  case(iLookStat%mean);get_statName='mean'
+  case(iLookStat%vari);get_statName='vari'
+  case(iLookStat%mini);get_statName='mini'
+  case(iLookStat%maxi);get_statName='maxi'
+  case(iLookStat%mode);get_statName='mode'
+  case(iLookStat%harm);get_statName='harm'
+  case(iLookStat%geom);get_statName='geom'
+  ! get to here if cannot find the variable
+  case default
+   get_statName = 'unkn'
+ endselect
+ end function get_statName
+
+ ! *******************************************************************************************************************
  ! public function put_ncVarID: assign netcdf variable id for a specific varaible of unknown type
  ! *******************************************************************************************************************
- subroutine put_ncVarID(varName,ncVarID,err,message)
+ subroutine put_ncVarID(varName,ncVarID,istat,err,message)
   USE data_struc,only:attr_meta ! attributes meta structure
   USE data_struc,only:type_meta ! type decs meta structure
   USE data_struc,only:mpar_meta ! model parameters meta structure
@@ -783,27 +809,28 @@ contains
   character(LEN=256), intent(out) :: message ! error message
   ! local vars
   integer(i4b)                    :: vDex          ! index in structure
+  integer(i4b)                    :: istat         ! statistic index
   ! initialize error message
   err=0; message='put_ncVarID/'
   ! do nothign if the ncVarID is missing
   if (ncVarID.lt.0) return  
   ! try all structures
   vDex = get_ixAttr  (trim(varName))
-  if (vDex.gt.0) then; attr_meta(vDex)%ncVarID = ncVarID; return; endif;
+  if (vDex.gt.0) then; attr_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
   vDex = get_ixType  (trim(varName))
-  if (vDex.gt.0) then; type_meta(vDex)%ncVarID = ncVarID; return; endif;
+  if (vDex.gt.0) then; type_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
   vDex = get_ixParam (trim(varName))
-  if (vDex.gt.0) then; mpar_meta(vDex)%ncVarID = ncVarID; return; endif;
+  if (vDex.gt.0) then; mpar_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
   vDex = get_ixBpar  (trim(varName))
-  if (vDex.gt.0) then; bpar_meta(vDex)%ncVarID = ncVarID; return; endif;
+  if (vDex.gt.0) then; bpar_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
   vDex = get_ixForce (trim(varName))
-  if (vDex.gt.0) then; forc_meta(vDex)%ncVarID = ncVarID; return; endif;
+  if (vDex.gt.0) then; forc_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
   vDex = get_ixIndex (trim(varName))
-  if (vDex.gt.0) then; indx_meta(vDex)%ncVarID = ncVarID; return; endif;
+  if (vDex.gt.0) then; indx_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
   vDex = get_ixMvar  (trim(varName))
-  if (vDex.gt.0) then; mvar_meta(vDex)%ncVarID = ncVarID; return; endif;
+  if (vDex.gt.0) then; mvar_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
   vDex = get_ixBvar  (trim(varName))
-  if (vDex.gt.0) then; bvar_meta(vDex)%ncVarID = ncVarID; return; endif;
+  if (vDex.gt.0) then; bvar_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
   ! if we get this far then the variable was not found
   err=20 
   message=trim(message)//'variable not found='

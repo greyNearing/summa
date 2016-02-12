@@ -69,9 +69,11 @@ MODULE data_struc
   character(len=64)                      :: varname=''               ! variable name
   character(len=128)                     :: vardesc=''               ! variable description
   character(len=64)                      :: varunit=''               ! variable units
-  integer(i4b)                           :: vartype=1                ! variable type (1=scalar,2=wLength,3=midSnow,4=midSoil,5=midToto,6=ifcSnow,7=ifcSoil,8=ifcToto,9=routing)
-  integer(i4b)                           :: ncVarID=-999             ! netcdf variable id 
-  logical(lgt)                           :: v_write=.FALSE.          ! flag to write variable to the output file
+  integer(i4b)                           :: vartype=0                ! variable type (1=scalar,2=wLength,3=midSnow,4=midSoil,5=midToto,6=ifcSnow,7=ifcSoil,8=ifcToto,9=routing)
+  ! the following are vectors for each possible output tatistic
+  ! the stats codes are: 1=instantaneous, 2=mean, 3=variance, 4=min, 5=max, 6=mode, 7=geometric, 8=harmonic
+  integer(i4b),dimension(8)              :: ncVarID=-999             ! netcdf variable id 
+  integer(i4b),dimension(8)              :: o_freq=0                 ! output frequency 
  endtype var_info
  ! define arrays of metadata
  type(var_info),pointer,save,public      :: time_meta(:) => null()   ! model time information
@@ -118,6 +120,11 @@ MODULE data_struc
  type, public :: var_i
   integer(i4b),pointer                   :: var(:) => null()
  endtype var_i
+ ! define types for output statistics (currently there are 8 statistics
+ ! ** double precision type of fixed length
+ type, public :: stat_d
+  real(dp),pointer                       :: stat(:,:) => null()
+ endtype stat_d
  ! define top-level derived types
  ! NOTE: either allocate directly, or use to point to higher dimensional structures
  type(var_i),pointer,save,public         :: time_hru(:) => null()    ! model time data
@@ -137,6 +144,9 @@ MODULE data_struc
  type(var_ilength),pointer,save,public   :: indx_data => null()      ! local column model indices
  type(var_d),pointer,save,public         :: bpar_data => null()      ! basin-average model parameters
  type(var_dlength),pointer,save,public   :: bvar_data => null()      ! basin-average model variables
+ ! define data types for output statistics - for individual HRUs, and for basin-average quantities
+ type(stat_d),pointer,save,public        :: forc_stat(:) => null()   ! model forcing data
+ type(stat_d),pointer,save,public        :: mvar_stat(:) => null()   ! local column model variables
  ! ***********************************************************************************************************
  ! Define common variables
  ! ***********************************************************************************************************

@@ -96,6 +96,9 @@ USE var_lookup,only:iLookINDEX                              ! look-up values for
 USE var_lookup,only:iLookBVAR                               ! look-up values for basin-average model variables
 USE var_lookup,only:iLookBPAR                               ! look-up values for basin-average model parameters
 USE var_lookup,only:iLookDECISIONS                          ! look-up values for model decisions
+! functions for compiling output statistics
+USE module_output,only:alloc_stats                          ! allocates arrays to store output statistics
+USE module_output,only:compile_stats                        ! calculates output statistics from model variables
 ! named variables for model decisions
 USE mDecisions_module,only:  &                              ! look-up values for method used to compute derivative
  numerical,   & ! numerical solution
@@ -206,6 +209,8 @@ call alloc_bvar(err,message); call handle_err(err,message)
 call alloc_forc(nHRU,err,message); call handle_err(err,message)
 call alloc_time(nHRU,err,message); call handle_err(err,message)
 call alloc_stim(refTime,err,message); call handle_err(err,message)
+! allocate space for output statistics
+call alloc_stats(nHRU,err,message); call handle_err(err,message)
 ! allocate space for the time step (recycled for each HRU for subsequent calls to coupled_em)
 allocate(dt_init(nHRU),stat=err); call handle_err(err,'problem allocating space for dt_init')
 
@@ -313,8 +318,8 @@ do iHRU=1,nHRU
   call def_output(nHRU,fileout,err,message); call handle_err(err,message)
  endif
  ! write local model attributes and parameters to the model output file
- call writeAttrb(fileout,iHRU,err,message); call handle_err(err,message)
- call writeParam(fileout,iHRU,err,message); call handle_err(err,message)
+ call writeAttrb(iHRU,err,message); call handle_err(err,message)
+ call writeParam(iHRU,err,message); call handle_err(err,message)
  ! initialize indices
  indx_data%var(iLookINDEX%midSnowStartIndex)%dat(1) = 1
  indx_data%var(iLookINDEX%midSoilStartIndex)%dat(1) = 1
@@ -395,7 +400,7 @@ do istep=1,numtim
     time_data%var(iLookTIME%imin)==0)then       ! minute = 0
 
   ! close old output file
-  if (ncid.eq.integerMissing) then
+  if (ncid.ne.integerMissing) then
    call netcdf_close(err,message)
    call handle_err(err,message)
   endif
@@ -413,8 +418,8 @@ do istep=1,numtim
    mpar_data => mpar_hru(iHRU)
    indx_data => indx_hru(iHRU)
    ! write model parameters to the model output file
-   call writeAttrb(fileout,iHRU,err,message); call handle_err(err,message)
-   call writeParam(fileout,iHRU,err,message); call handle_err(err,message)
+   call writeAttrb(iHRU,err,message); call handle_err(err,message)
+   call writeParam(iHRU,err,message); call handle_err(err,message)
    ! re-initalize the indices for midSnow, midSoil, midToto, and ifcToto
    jStep=1
    indx_data%var(iLookINDEX%midSnowStartIndex)%dat(1) = 1
@@ -567,11 +572,14 @@ do istep=1,numtim
                                                              mvar_data%var(iLookMVAR%averageAquiferBaseflow)%dat(1) * fracHRU
   endif
 
+  ! compile output statistics before writing to netcdf file
+  call compile_stats(iHRU,jstep,err,message); call handle_err(err,message)
+
   ! write the forcing data to the model output file
-  call writeForce(fileout,iHRU,jstep,err,message); call handle_err(err,message)
+  call writeForce(iHRU,jstep,err,message); call handle_err(err,message)
 
   ! write the model output to the NetCDF file
-  call writeModel(fileout,iHRU,jstep,err,message); call handle_err(err,message)
+  call writeModel(iHRU,jstep,err,message); call handle_err(err,message)
   !if(istep>6) call handle_err(20,'stopping on a specified step: after call to writeModel')
 
   ! increment the model indices
@@ -608,7 +616,7 @@ do istep=1,numtim
  call handle_err(err,message)
 
  ! write basin-average variables
- call writeBasin(fileout,jstep,err,message); call handle_err(err,message)
+ call writeBasin(jstep,err,message); call handle_err(err,message)
 
  ! increment the time index
  jstep = jstep+1
@@ -617,6 +625,10 @@ do istep=1,numtim
  !stop 'end of time step'
 
 end do  ! (looping through time)
+
+! close any open output files
+call netcdf_close(err,message)
+call handle_err(err,message)
 
 ! deallocate space for dt_init and upArea
 deallocate(dt_init,upArea,stat=err); call handle_err(err,'unable to deallocate space for dt_init and upArea')

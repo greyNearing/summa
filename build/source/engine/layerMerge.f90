@@ -435,6 +435,7 @@ contains
  USE data_struc,only:mvar_meta                ! metadata
  USE data_struc,only:var_ilength,var_dlength  ! data vectors with variable length dimension
  USE var_lookup,only:iLookMVAR,iLookINDEX     ! named variables for structure elements
+ USE var_lookup,only:iLookVarType             ! look up for type case select 
  implicit none
  ! input/output: data structures
  type(var_ilength),intent(inout) :: indx_data ! type of model layer
@@ -455,10 +456,10 @@ contains
  do ivar=1,size(mvar_data%var)
   ! define bounds
   select case(mvar_meta(ivar)%vartype)
-   case(3); ix_lower=1; ix_upper=nSnow   ! midSnow 
-   case(5); ix_lower=1; ix_upper=nLayers ! midToto
-   case(6); ix_lower=0; ix_upper=nSnow   ! ifcSnow
-   case(8); ix_lower=0; ix_upper=nLayers ! ifcToto
+   case(iLookVarType%midSnow); ix_lower=1; ix_upper=nSnow   ! midSnow 
+   case(iLookVarType%midToto); ix_lower=1; ix_upper=nLayers ! midToto
+   case(iLookVarType%ifcSnow); ix_lower=0; ix_upper=nSnow   ! ifcSnow
+   case(iLookVarType%ifcToto); ix_lower=0; ix_upper=nLayers ! ifcToto
    case default; cycle  ! no need to remove soil layers or scalar variables
   end select
   ! remove a layer for a model variable vector
