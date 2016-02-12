@@ -24,6 +24,7 @@ USE netcdf
 implicit none
 private
 public :: def_output
+public :: netcdf_close
 ! define dimension names
 character(len=32),parameter :: hru_DimName='hru'                       ! dimension name for the HRUs
 character(len=32),parameter :: scalar_DimName='scalar'                 ! dimension name for scalar variables
@@ -178,6 +179,7 @@ contains
  USE data_struc,only:ix_soil            ! named variable to identify a soil layer
  USE var_lookup,only:iLookINDEX         ! named variables for structure elements
  ! model decisions
+ USE data_struc,only:ncid               ! ID for netcdf output file 
  USE data_struc,only:model_decisions    ! model decision structure
  USE var_lookup,only:iLookDECISIONS     ! named variables for elements of the decision structure
  USE mDecisions_module,only:&
@@ -190,7 +192,6 @@ contains
  integer(i4b),intent(out)    :: err                        ! error code
  character(*),intent(out)    :: message                    ! error message
  ! define local variables
- integer(i4b)                :: ncid                       ! NetCDF file ID
  integer(i4b)                :: dimID
  integer(i4b)                :: maxRouting=1000            ! maximum length of routing vector
  integer(i4b),parameter      :: maxSpectral=2              ! maximum number of spectral bands
@@ -248,9 +249,8 @@ contains
  ! create dimension for ifcToto+time
  err = nf90_def_dim(ncid, trim(ifcTotoAndTime_DimName), maxLength, dimId)
  message='iCreate[ifcToto]'; call netcdf_err(err,message); if (err/=0) return
- ! close NetCDF file
+ ! end definition phase
  err = nf90_enddef(ncid); call netcdf_err(err,message); if (err/=0) return
- err = nf90_close(ncid); call netcdf_err(err,message); if (err/=0) return
  end subroutine ini_create
 
 
@@ -258,6 +258,7 @@ contains
  ! private subroutine put_attrib: put global attributes as character string
  ! **********************************************************************************************************
  subroutine put_attrib(infile,attname,attvalue,err,message)
+ USE data_struc,only:ncid               ! ID for netcdf output file 
  USE data_struc,only:var_info                              ! derived type for metadata
  implicit none
  ! declare dummy variables
@@ -266,13 +267,8 @@ contains
  character(*), intent(in)   :: attvalue    ! attribute vaue
  integer(i4b),intent(out)   :: err         ! error code
  character(*),intent(out)   :: message     ! error message
- ! local variables
- integer(i4b)               :: ncid        ! NetCDF file ID
  ! initialize error control
  err=0;message="f-defAttrib/"//trim(attname)//"/"//trim(attvalue)//"/"
- ! open NetCDF file
- err = nf90_open(infile,nf90_write,ncid)
- call netcdf_err(err,message); if (err/=0) return
  ! allow re-definition of variables
  err = nf90_redef(ncid); call netcdf_err(err,message); if (err/=0) return
  ! put the attribute
@@ -280,8 +276,6 @@ contains
  call netcdf_err(err,message); if (err/=0) return
  ! end definition phase
  err = nf90_enddef(ncid); call netcdf_err(err,message); if (err/=0) return
- ! close output file
- err = nf90_close(ncid); call netcdf_err(err,message); if (err/=0) return
  end subroutine put_attrib
 
 
@@ -289,8 +283,9 @@ contains
  ! private subroutine def_variab: define variables
  ! **********************************************************************************************************
  subroutine def_variab(infile,dimNames,metadata,ivtype,err,message)
+ USE data_struc,only:ncid               ! ID for netcdf output file 
  USE data_struc,only:var_info              ! derived type for metadata
- USE get_ixname_module,only:put_ncid       ! stores the netcdf id number for later retrieval
+ USE get_ixname_module,only:put_ncVarID    ! stores the netcdf variable id number for later retrieval
  implicit none
  ! declare dummy variables
  character(*), intent(in)   :: infile      ! filename
@@ -302,13 +297,10 @@ contains
  ! local variables
  integer(i4b)               :: id          ! loop through dimensions
  integer(i4b)               :: dimIDs(size(dimNames))
- integer(i4b)               :: ncid        ! NetCDF file ID
  integer(i4b)               :: iVarId      ! variable ID
  ! initialize error control
  err=0;message="f-defVariab/"//trim(metadata%varname)//"/"
 
- ! open NetCDF file
- err = nf90_open(infile,nf90_write,ncid); call netcdf_err(err,message); if (err/=0) return
  ! allow re-definition of variables
  err = nf90_redef(ncid); call netcdf_err(err,message); if (err/=0) return
 
@@ -328,13 +320,32 @@ contains
  call netcdf_err(err,message); if (err/=0) return
 
  ! store netcdf varID in meta structure so that we do not need to inquire every time
- call put_ncid(metadata%varname,iVarID,err,message); if (err/=0) return
+ call put_ncVarID(metadata%varname,iVarID,err,message); if (err/=0) return
  
  ! end definition phase
  err = nf90_enddef(ncid); call netcdf_err(err,message); if (err/=0) return
- ! close output file
- err = nf90_close(ncid); call netcdf_err(err,message); if (err/=0) return
  end subroutine def_variab
+
+
+ ! **********************************************************************************************************
+ ! private subroutine put_attrib: put global attributes as character string
+ ! **********************************************************************************************************
+ subroutine netcdf_close(err,message)
+ USE data_struc,only:ncid                   ! ID for netcdf output file 
+ USE multiconst,only:integerMissing         ! missing value flag
+ implicit none
+ ! declare dummy variables
+ integer(i4b),intent(out)   :: err          ! error code
+ character(*),intent(out)   :: message      ! error message
+ ! initialize error control
+ err=0
+ ! close output file
+ err = nf90_close(ncid)
+ ncid = integerMissing
+ call netcdf_err(err,message)
+ if (err/=0) message='netcdf_close'//trim(message)
+ return
+ end subroutine netcdf_close
 
 
  ! **********************************************************************************************************

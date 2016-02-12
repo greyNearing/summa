@@ -70,7 +70,7 @@ MODULE data_struc
   character(len=128)                     :: vardesc=''               ! variable description
   character(len=64)                      :: varunit=''               ! variable units
   integer(i4b)                           :: vartype=1                ! variable type (1=scalar,2=wLength,3=midSnow,4=midSoil,5=midToto,6=ifcSnow,7=ifcSoil,8=ifcToto,9=routing)
-  integer(i4b)                           :: ncid=-999                ! netcdf variable id 
+  integer(i4b)                           :: ncVarID=-999             ! netcdf variable id 
   logical(lgt)                           :: v_write=.FALSE.          ! flag to write variable to the output file
  endtype var_info
  ! define arrays of metadata
@@ -140,6 +140,7 @@ MODULE data_struc
  ! ***********************************************************************************************************
  ! Define common variables
  ! ***********************************************************************************************************
+ integer(i4b),save,public                :: ncid                     ! ID for netcdf output file
  integer(i4b),save,public                :: nSnow                    ! number of snow layers
  integer(i4b),save,public                :: nSoil                    ! number of soil layers
  integer(i4b),save,public                :: nLayers                  ! total number of layers in the snow-soil system

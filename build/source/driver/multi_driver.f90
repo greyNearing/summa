@@ -40,6 +40,7 @@ USE allocspace_module,only:alloc_bvar                       ! module to allocate
 USE mDecisions_module,only:mDecisions                       ! module to read model decisions
 USE popMetadat_module,only:popMetadat                       ! module to populate metadata structures
 USE def_output_module,only:def_output                       ! module to define model output
+USE def_output_module,only:netcdf_close                     ! module to define model output
 USE ffile_info_module,only:ffile_info                       ! module to read information on forcing datafile
 USE read_attrb_module,only:read_attrb                       ! module to read local attributes
 USE read_pinit_module,only:read_pinit                       ! module to read initial model parameter values
@@ -64,6 +65,7 @@ USE qTimeDelay_module,only:qOverland                        ! module to route wa
 USE summaFileManager,only:SETNGS_PATH                       ! define path to settings files (e.g., Noah vegetation tables)
 USE summaFileManager,only:OUTPUT_PATH,OUTPUT_PREFIX         ! define output file
 USE summaFileManager,only:LOCALPARAM_INFO,BASINPARAM_INFO   ! files defining the default values and constraints for model parameters
+USE data_struc,only:ncid                                    ! flag to initialize a new output file
 USE data_struc,only:doJacobian                              ! flag to compute the Jacobian
 USE data_struc,only:localParFallback                        ! local column default parameters
 USE data_struc,only:basinParFallback                        ! basin-average default parameters
@@ -104,6 +106,7 @@ USE mDecisions_module,only:&                                ! look-up values for
 USE mDecisions_module,only:&                                ! look-up values for the choice of method for the spatial representation of groundwater
  localColumn, & ! separate groundwater representation in each local soil column
  singleBasin    ! single groundwater store over the entire basin
+USE multiconst,only:integerMissing                          ! missing value flag
 implicit none
 
 ! *****************************************************************************
@@ -175,6 +178,8 @@ endif
 call summa_SetDirsUndPhiles(summaFileManagerFile,err,message); call handle_err(err,message)
 ! initialize the Jacobian flag
 doJacobian=.false.
+! initialize the output flag
+ncid=integerMissing
 
 ! *****************************************************************************
 ! (2) read model metadata
@@ -388,6 +393,13 @@ do istep=1,numtim
     time_data%var(iLookTIME%id)  ==1  .and. &   ! day = 1
     time_data%var(iLookTIME%ih)  ==1  .and. &   ! hour = 1
     time_data%var(iLookTIME%imin)==0)then       ! minute = 0
+
+  ! close old output file
+  if (ncid.eq.integerMissing) then
+   call netcdf_close(err,message)
+   call handle_err(err,message)
+  endif
+
   ! define the filename
   write(fileout,'(a,i0,a,i0,a)') trim(OUTPUT_PATH)//trim(OUTPUT_PREFIX)//'_',&
                                  time_data%var(iLookTIME%iyyy),'-',time_data%var(iLookTIME%iyyy)+1,&
