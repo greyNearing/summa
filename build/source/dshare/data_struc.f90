@@ -23,6 +23,8 @@ MODULE data_struc
  USE nrtype
  USE multiconst,only:integerMissing
  implicit none
+ integer(i4b), parameter :: numStats = 9
+ integer(i4b), parameter :: maxIntLayr = 10 
  private
  ! ***********************************************************************************************************
  ! Define the model decisions
@@ -72,8 +74,8 @@ MODULE data_struc
   integer(i4b)                           :: vartype=0                ! variable type (1=scalar,2=wLength,3=midSnow,4=midSoil,5=midToto,6=ifcSnow,7=ifcSoil,8=ifcToto,9=routing)
   ! the following are vectors for each possible output tatistic
   ! the stats codes are: 1=instantaneous, 2=mean, 3=variance, 4=min, 5=max, 6=mode, 7=geometric, 8=harmonic
-  integer(i4b),dimension(8)              :: ncVarID=-999             ! netcdf variable id 
-  integer(i4b),dimension(8)              :: o_freq=0                 ! output frequency 
+  integer(i4b),dimension(numStats)       :: ncVarID=-999             ! netcdf variable id 
+  logical(lgt),dimension(numStats)       :: stat=.false.             ! output flag 
  endtype var_info
  ! define arrays of metadata
  type(var_info),pointer,save,public      :: time_meta(:) => null()   ! model time information
@@ -85,6 +87,22 @@ MODULE data_struc
  type(var_info),pointer,save,public      :: indx_meta(:) => null()   ! local model indices for each HRU
  type(var_info),pointer,save,public      :: bpar_meta(:) => null()   ! basin parameters for aggregated processes
  type(var_info),pointer,save,public      :: bvar_meta(:) => null()   ! basin parameters for aggregated processes
+ ! ***********************************************************************************************************
+ ! Define metadata for vertically integrated variables
+ ! ***********************************************************************************************************
+ ! define derived type for model variables, including name, decription, and units
+ type,public :: int_info
+  character(len=64)                :: varname=''     ! variable name
+  character(len=128)               :: vardesc=''     ! variable description
+  character(len=64)                :: varunit=''     ! variable units
+  integer(i4b)                     :: vartype=0      ! variable type
+  integer(i4b)                     :: layertype=0    ! variable type
+  integer(i4b),dimension(numStats) :: ncVarID=-999   ! netcdf variable id 
+  logical(lgt),dimension(numStats) :: stat=.false.   ! output flag 
+  integer(i4b)                     :: startInt=-9999 ! start depth for integration
+  integer(i4b)                     :: stopInt=-9999  ! stop depth for integration
+ endtype int_info
+ type(int_info),pointer,save,public :: intg_meta(:,:) => null()   ! vertically integrated variables
  ! ***********************************************************************************************************
  ! Define hierarchal derived data types
  ! ***********************************************************************************************************
@@ -120,11 +138,6 @@ MODULE data_struc
  type, public :: var_i
   integer(i4b),pointer                   :: var(:) => null()
  endtype var_i
- ! define types for output statistics (currently there are 8 statistics
- ! ** double precision type of fixed length
- type, public :: stat_d
-  real(dp),pointer                       :: stat(:,:) => null()
- endtype stat_d
  ! define top-level derived types
  ! NOTE: either allocate directly, or use to point to higher dimensional structures
  type(var_i),pointer,save,public         :: time_hru(:) => null()    ! model time data
@@ -145,8 +158,10 @@ MODULE data_struc
  type(var_d),pointer,save,public         :: bpar_data => null()      ! basin-average model parameters
  type(var_dlength),pointer,save,public   :: bvar_data => null()      ! basin-average model variables
  ! define data types for output statistics - for individual HRUs, and for basin-average quantities
- type(stat_d),pointer,save,public        :: forc_stat(:) => null()   ! model forcing data
- type(stat_d),pointer,save,public        :: mvar_stat(:) => null()   ! local column model variables
+ type(var_dlength),pointer,save,public   :: forc_stat(:) => null()   ! model forcing data
+ type(var_dlength),pointer,save,public   :: mvar_stat(:) => null()   ! local column model variables
+ type(var_dlength),pointer,save,public   :: intg_stat(:,:) => null() ! integrated layer variables
+ type(var_dlength),pointer,save,public   :: bvar_stat => null()      ! basin variables
  ! ***********************************************************************************************************
  ! Define common variables
  ! ***********************************************************************************************************
@@ -164,6 +179,7 @@ MODULE data_struc
  integer(i4b),save,public                :: urbanVegCategory=1       ! vegetation category for urban areas
  logical(lgt),save,public                :: doJacobian=.false.       ! flag to compute the Jacobian
  logical(lgt),save,public                :: globalPrintFlag=.false.  ! flag to compute the Jacobian
+ integer(i4b),save,public                :: outputFrequency          ! frequency for writing output
  ! ***********************************************************************************************************
  ! Define ancillary data structures
  ! ***********************************************************************************************************

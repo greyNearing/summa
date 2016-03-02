@@ -558,7 +558,34 @@ MODULE var_lookup
  endtype iLook_bvar
 
  ! ***********************************************************************************************************
- ! (9) structure for looking up the type of a model variable (this is only needed for backward compatability, and should be removed eventually)
+ ! (9) define vertically integrated variables 
+ ! ***********************************************************************************************************
+ type, public :: iLook_intg
+  ! midToto
+  integer(i4b)    :: mLayerTemp           = 1
+  integer(i4b)    :: mLayerVolFracAir     = 2
+  integer(i4b)    :: mLayerVolFracIce     = 3
+  integer(i4b)    :: mLayerVolFracLiq     = 4
+  integer(i4b)    :: mLayerVolHtCapBulk   = 5
+  integer(i4b)    :: mLayerMeltFreeze     = 6
+  integer(i4b)    :: mLayerInfilFreeze    = 7
+  ! midSnow
+  integer(i4b)    :: mLayerThetaResid     = 8
+  integer(i4b)    :: mLayerPoreSpace      = 9
+  ! midSoil
+  integer(i4b)    :: mLayerRootDensity    = 10 
+  integer(i4b)    :: mLayerCompress       = 11
+  integer(i4b)    :: mLayerInitTranspire  = 12
+  integer(i4b)    :: mLayerTranspire      = 13
+  integer(i4b)    :: mLayerInitQMacropore = 14
+  integer(i4b)    :: mLayerQMacropore     = 15
+  integer(i4b)    :: mLayerInitBaseflow   = 16
+  integer(i4b)    :: mLayerBaseflow       = 17
+  integer(i4b)    :: mLayerColumnInflow   = 18
+ endtype iLook_intg
+
+ ! ***********************************************************************************************************
+ ! (10) structure for looking up the type of a model variable (this is only needed for backward compatability, and should be removed eventually)
  ! ***********************************************************************************************************
  type, public :: iLook_varType
   integer(i4b)    :: scalarv   =  1 ! scalar variables 
@@ -573,7 +600,7 @@ MODULE var_lookup
  endtype iLook_varType
 
  ! ***********************************************************************************************************
- ! (10) structure for looking up statistics 
+ ! (11) structure for looking up statistics 
  ! ***********************************************************************************************************
  type, public :: iLook_stat
   integer(i4b)    :: inst   =  1 ! instantaneous 
@@ -584,6 +611,7 @@ MODULE var_lookup
   integer(i4b)    :: mode   =  6 ! mode over period
   integer(i4b)    :: harm   =  7 ! harmonic mean
   integer(i4b)    :: geom   =  8 ! geometric mean 
+  integer(i4b)    :: totl   =  9 ! summation 
  endtype iLook_stat
 
  ! ***********************************************************************************************************
@@ -639,7 +667,9 @@ MODULE var_lookup
  type(iLook_bvar),    public,parameter :: iLookBVAR     =ilook_bvar    (  1,  2,  3,  4,  5,  6,  7,  8,  9, 10,&
                                                                          11)
  type(iLook_varType), public,parameter :: iLookVarType  =ilook_varType (  1,  2,  3,  4,  5,  6,  7,  8,  9)
- type(iLook_stat),    public,parameter :: iLookStat     =ilook_stat    (  1,  2,  3,  4,  5,  6,  7,  8)
+ type(iLook_stat),    public,parameter :: iLookStat     =ilook_stat    (  1,  2,  3,  4,  5,  6,  7,  8,  9)
+ type(iLook_intg),    public,parameter :: iLookIntg     =ilook_intg    (  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, &
+                                                                         11, 12, 13, 14, 15, 16, 17, 18)
 
  ! define maximum number of variables of each type
  integer(i4b),parameter,public :: maxvarDecisions= 38
@@ -653,7 +683,8 @@ MODULE var_lookup
  integer(i4b),parameter,public :: maxvarBpar     = 5
  integer(i4b),parameter,public :: maxvarBvar     = 11
  integer(i4b),parameter,public :: maxvarTypes    = 9
- integer(i4b),parameter,public :: maxvarStats    = 8
+ integer(i4b),parameter,public :: maxvarStats    = 9
+ integer(i4b),parameter,public :: maxvarIntg     = 18
 
 
 END MODULE var_lookup

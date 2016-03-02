@@ -70,6 +70,7 @@ USE data_struc,only:doJacobian                              ! flag to compute th
 USE data_struc,only:localParFallback                        ! local column default parameters
 USE data_struc,only:basinParFallback                        ! basin-average default parameters
 USE data_struc,only:mpar_meta,bpar_meta                     ! metadata for local column and basin-average model parameters
+USE data_struc,only:outputFrequency                         ! output frequency
 USE data_struc,only:numtim                                  ! number of time steps
 USE data_struc,only:time_data,time_hru,refTime              ! time and reference time
 USE data_struc,only:forc_data,forc_hru                      ! model forcing data
@@ -98,7 +99,7 @@ USE var_lookup,only:iLookBPAR                               ! look-up values for
 USE var_lookup,only:iLookDECISIONS                          ! look-up values for model decisions
 ! functions for compiling output statistics
 USE module_output,only:alloc_stats                          ! allocates arrays to store output statistics
-USE module_output,only:compile_stats                        ! calculates output statistics from model variables
+USE module_output,only:compile_stats,compile_basin_stats    ! calculates output statistics from model variables
 ! named variables for model decisions
 USE mDecisions_module,only:  &                              ! look-up values for method used to compute derivative
  numerical,   & ! numerical solution
@@ -119,7 +120,8 @@ implicit none
 integer(i4b)              :: iHRU,jHRU,kHRU                 ! index of the hydrologic response unit
 integer(i4b)              :: nHRU                           ! number of hydrologic response units
 integer(i4b)              :: iStep=0                        ! index of model time step
-integer(i4b)              :: jStep=0                        ! index of model output
+integer(i4b)              :: jStep=0                        ! index of water year
+integer(i4b)              :: kStep=0       !GREY GSN  - do we need this?               ! index of model output
 ! define the re-start file
 logical(lgt)              :: printRestart                   ! flag to print a re-start file
 integer(i4b),parameter    :: ixRestart_iy=1000              ! named variable to print a re-start file once per year
@@ -371,6 +373,7 @@ end do
 
 ! initialize time step index
 jstep=1
+kstep=1
 
 ! ****************************************************************************
 ! (6) loop through time
@@ -422,6 +425,7 @@ do istep=1,numtim
    call writeParam(iHRU,err,message); call handle_err(err,message)
    ! re-initalize the indices for midSnow, midSoil, midToto, and ifcToto
    jStep=1
+   kstep=1
    indx_data%var(iLookINDEX%midSnowStartIndex)%dat(1) = 1
    indx_data%var(iLookINDEX%midSoilStartIndex)%dat(1) = 1
    indx_data%var(iLookINDEX%midTotoStartIndex)%dat(1) = 1
@@ -575,12 +579,13 @@ do istep=1,numtim
   ! compile output statistics before writing to netcdf file
   call compile_stats(iHRU,jstep,err,message); call handle_err(err,message)
 
-  ! write the forcing data to the model output file
-  call writeForce(iHRU,jstep,err,message); call handle_err(err,message)
-
-  ! write the model output to the NetCDF file
-  call writeModel(iHRU,jstep,err,message); call handle_err(err,message)
-  !if(istep>6) call handle_err(20,'stopping on a specified step: after call to writeModel')
+  if (mod(jstep,outputFrequency).eq.0) then
+   ! write the forcing data to the model output file
+   call writeForce(iHRU,kstep,err,message); call handle_err(err,message)
+   ! write the model output to the NetCDF file
+   call writeModel(iHRU,kstep,err,message); call handle_err(err,message)
+   !if(istep>6) call handle_err(20,'stopping on a specified step: after call to writeModel')
+  endif
 
   ! increment the model indices
   midSnowStartIndex = midSnowStartIndex + nSnow
@@ -615,14 +620,17 @@ do istep=1,numtim
                 err,message)                                                       ! intent(out): error control
  call handle_err(err,message)
 
- ! write basin-average variables
- call writeBasin(jstep,err,message); call handle_err(err,message)
+ ! compile basin-average statistics
+ call compile_basin_stats(istep,err,message); call handle_err(err,message)
+
+ if (mod(jstep,outputFrequency).eq.0) then
+  ! write basin-average variables
+  call writeBasin(kstep,err,message); call handle_err(err,message)
+  kstep = kstep + 1
+ endif
 
  ! increment the time index
  jstep = jstep+1
-
- !pause 'in driver: testing differences'
- !stop 'end of time step'
 
 end do  ! (looping through time)
 

@@ -33,6 +33,7 @@ public::get_ixMvar
 public::get_ixIndex
 public::get_ixBpar
 public::get_ixBvar
+public::get_ixIntg
 public::get_ixVarType
 public::get_varTypeName
 public::get_statName
@@ -738,6 +739,43 @@ contains
 
 
  ! *******************************************************************************************************************
+ ! public function get_ixintg: get the index of the named variables for vertically integrated variables
+ ! *******************************************************************************************************************
+ function get_ixintg(varName)
+ USE multiconst,only:integerMissing
+ USE var_lookup,only:iLookINTG                       ! indices of the named variables
+ implicit none
+ ! define dummy variables
+ character(*), intent(in) :: varName                 ! variable name
+ integer(i4b)             :: get_ixintg              ! index of the named variable
+ ! get the index of the named variables
+ select case(trim(varName))
+  case('mLayerTemp'          ); get_ixintg = iLookINTG%mLayerTemp
+  case('mLayerVolFracAir'    ); get_ixintg = iLookINTG%mLayerVolFracAir
+  case('mLayerVolFracIce'    ); get_ixintg = iLookINTG%mLayerVolFracIce
+  case('mLayerVolFracLiq'    ); get_ixintg = iLookINTG%mLayerVolFracLiq
+  case('mLayerVolHtCapBulk'  ); get_ixintg = iLookINTG%mLayerVolHtCapBulk
+  case('mLayerMeltFreeze'    ); get_ixintg = iLookINTG%mLayerMeltFreeze
+  case('mLayerInfilFreeze'   ); get_ixintg = iLookINTG%mLayerInfilFreeze
+  case('mLayerThetaResid'    ); get_ixintg = iLookINTG%mLayerThetaResid
+  case('mLayerPoreSpace'     ); get_ixintg = iLookINTG%mLayerPoreSpace
+  case('mLayerRootDensity'   ); get_ixintg = iLookINTG%mLayerRootDensity
+  case('mLayerCompress'      ); get_ixintg = iLookINTG%mLayerCompress
+  case('mLayerInitTranspire' ); get_ixintg = iLookINTG%mLayerInitTranspire
+  case('mLayerTranspire'     ); get_ixintg = iLookINTG%mLayerTranspire
+  case('mLayerQMacropore'    ); get_ixintg = iLookINTG%mLayerQMacropore
+  case('mLayerBaseflow'      ); get_ixintg = iLookINTG%mLayerBaseflow
+  case('mLayerColumnOutflow' ); get_ixintg = iLookINTG%mLayerColumnOutflow
+  case('mLayerInitQMacropore'); get_ixintg = iLookINTG%mLayerInitQMacropore
+  case('mLayerInitBaseflow'  ); get_ixintg = iLookINTG%mLayerInitBaseflow
+  ! get to here if cannot find the variable
+  case default
+   get_ixintg = integerMissing
+ endselect
+ end function get_ixintg
+
+
+ ! *******************************************************************************************************************
  ! public function get_varTypeName: get the index of the named variable type
  ! *******************************************************************************************************************
  function get_varTypeName(varType)
@@ -783,6 +821,7 @@ contains
   case(iLookStat%mode);get_statName='mode'
   case(iLookStat%harm);get_statName='harm'
   case(iLookStat%geom);get_statName='geom'
+  case(iLookStat%totl);get_statName='totl'
   ! get to here if cannot find the variable
   case default
    get_statName = 'unkn'

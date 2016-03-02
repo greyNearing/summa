@@ -24,6 +24,7 @@ implicit none
 private
 public :: alloc_stats
 public :: compile_stats
+public :: compile_basin_stats
 contains
 
  ! ******************************************************************************************************
@@ -33,12 +34,15 @@ contains
  USE nrtype
  ! data structures
  USE data_struc, only: mvar_stat                ! (to be allocated) stat data structure for local model variables
- USE data_struc, only: mvar_meta                ! model metadata structure 
  USE data_struc, only: forc_stat                ! (to be allocated) stat data structure for forcing variables
- USE data_struc, only: forc_meta                ! forcing metadata structure 
+ USE data_struc, only: bvar_stat                ! (to be allocated) stat data structure for local basin variables
+ USE data_struc, only: intg_stat                ! (to be allocated) stat data structure for vertically integrated variables
  USE var_lookup, only: maxvarMvar               ! # of dynamic model variables 
  USE var_lookup, only: maxvarForc               ! # of forcing variables 
- USE var_lookup, only: maxvarStats              ! # of output statistics 
+ USE var_lookup, only: maxvarBvar               ! # of basin variables 
+ USE var_lookup, only: maxvarStat               ! # of output statistics 
+ USE var_lookup, only: maxvarIntg               ! # of integrated variables 
+ USE data_struc, only: maxIntLayr               ! # of integration layers
  USE data_struc, only: indx_data                ! timestep-specific layer index data 
  ! structures of named variables
  USE var_lookup, only: iLookIndex               ! named variables for layer indices 
@@ -51,19 +55,16 @@ contains
  character(*),intent(out)       :: message                        ! error message
  integer(i4b),intent(in)        :: nHRU                           ! number of HRUs
  ! local variables
- integer(i4b)                   :: iVar                           ! index into var_info arrays (for loop)
- integer(i4b)                   :: iStat                          ! index into each dimension of a var_stat array (for loop)
+ integer(i4b)                   :: iVar                           ! index var_info array 
+ integer(i4b)                   :: iStat                          ! index var_stat array 
+ integer(i4b)                   :: iInt                           ! index integration layers 
  real(dp),parameter             :: missingDouble=-9999._dp
  integer(i4b),parameter         :: nBand=2                        ! ?why is this not a part of var_lookup?
  integer(i4b)                   :: iHRU                           ! loop through HRUs
+ integer(i4b)                   :: iInt                           ! loop through vertically integrated layers
  integer(i4b)                   :: nVar                           ! number of variables
  ! initialize error control
  err=0; message='alloc_stats/'
-
- ! check that the metadata structure is allocated
- if(.not.associated(mvar_meta))then
- err=10; message=trim(message)//"metadataNotInitialized"; return
- endif
 
  ! --------------------------------------------
  ! (1) allocate the HRU level structure
@@ -76,49 +77,70 @@ contains
  if(associated(forc_stat)) deallocate(mvar_stat)
  allocate(forc_stat(nHRU),stat=err)
  if(err/=0)then; err=20; message=trim(message)//"problemAllocateDataTopLevel-Forc"; return; endif
+ ! basin variables
+ if(associated(bvar_stat)) deallocate(bvar_stat)
+ allocate(bvar_stat,stat=err)
+ if(err/=0)then; err=20; message=trim(message)//"problemAllocateDataTopLevel-Bvar"; return; endif
+ ! integrated variables
+ if(associated(intg_stat)) deallocate(intg_stat)
+ allocate(intg_stat(nHRU,maxIntLayr),stat=err)
+ if(err/=0)then; err=20; message=trim(message)//"problemAllocateDataTopLevel-Intg"; return; endif
 
  ! --------------------------------------------
  ! (2) allocate the variable level structure
  ! --------------------------------------------
  ! model variables 
  do iHRU=1,nHRU
-  allocate(mvar_stat(iHRU)%stat(maxvarMvar,maxvarStats+1),stat=err)
+  allocate(mvar_stat(iHRU)%var(maxvarMvar),stat=err)
   if(err/=0)then; err=20; message=trim(message)//"problemAllocateData2ndLevel-Mvar"; return; endif
  end do ! (looping through the HRUs)
  ! forcing variables 
  do iHRU=1,nHRU
-  allocate(forc_stat(iHRU)%stat(maxvarForc,maxvarStats+1),stat=err)
+  allocate(forc_stat(iHRU)%var(maxvarForc),stat=err)
   if(err/=0)then; err=20; message=trim(message)//"problemAllocateData2ndLevel-Forc"; return; endif
  end do ! (looping through the HRUs)
- 
-! ! --------------------------------------------
-! ! (3) allocate data level structure
-! ! --------------------------------------------
-! ! model variables
-! do iHRU=1,nHRU
-!  do iVar=1,maxvarMvar
-!   do iStat=1,maxvarStats+1
-!    select case(mvar_meta(ivar)%vartype)
-!     case(iLookVarType%scalarv); allocate(mvar_stat(iHRU)%stat(iVar,iStat)%dat(1),stat=err)         ! scalarv
-!!     case(iLookVarType%wLength); allocate(mvar_stat(iHRU)%stat(iVar,iStat)%dat(nBand),stat=err)     ! wLength
-!!     case(iLookVarType%midSnow); allocate(mvar_stat(iHRU)%stat(iVar,iStat)%dat(nSnow),stat=err)     ! midSnow
-!!     case(iLookVarType%midSoil); allocate(mvar_stat(iHRU)%stat(iVar,iStat)%dat(nSoil),stat=err)     ! midSoil
-!!     case(iLookVarType%midToto); allocate(mvar_stat(iHRU)%stat(iVar,iStat)%dat(nLayers),stat=err)   ! midToto
-!!     case(iLookVarType%ifcSnow); allocate(mvar_stat(iHRU)%stat(iVar,iStat)%dat(0:nSnow),stat=err)   ! ifcSnow
-!!     case(iLookVarType%ifcSoil); allocate(mvar_stat(iHRU)%stat(iVar,iStat)%dat(0:nSoil),stat=err)   ! ifcSoil
-!!     case(iLookVarType%ifcToto); allocate(mvar_stat(iHRU)%stat(iVar,iStat)%dat(0:nLayers),stat=err) ! ifcToto
-!     case default
-!      err=41; message=trim(message)//"unknownVariableType[name='"//trim(mvar_meta(ivar)%varname)//"'; &
-!                                     &type='"//trim(get_varTypeName(mvar_meta(ivar)%vartype))//"']"; return
-!    endselect
-!    if(err/=0)then;err=30;message=trim(message)//"problemAllocate[var='"//trim(mvar_meta(ivar)%varname)//"']"; return; endif
-!    ! fill data with missing values
-!    mvar_stat(iHRU)%stat(iVar,iStat)%dat = missingDouble
-!   enddo ! iStat
-!  enddo ! iVar
-! enddo ! iHRU
+ ! basin variables 
+ allocate(bvar_stat%var(maxvarBvar),stat=err)
+ if(err/=0)then; err=20; message=trim(message)//"problemAllocateData2ndLevel-Bvar"; return; endif
+ ! vertically integrated variables 
+ do iHRU=1,nHRU
+  do iInt = 1,maxIntLayr
+   allocate(intg_stat(iHRU,iInt)%var(maxvarIntg),stat=err)
+   if(err/=0)then; err=20; message=trim(message)//"problemAllocateData2ndLevel-Intg"; return; endif
+  enddo ! integration layers
+ end do ! (looping through the HRUs)
 
-
+ ! --------------------------------------------
+ ! (3) allocate the data level structure
+ ! --------------------------------------------
+ ! model variables 
+ do iHRU=1,nHRU
+  do iVar = 1,maxvarMvar
+   allocate(mvar_stat(iHRU)%var(iVar)%dat(maxvarStat+1),stat=err)
+   if(err/=0)then; err=20; message=trim(message)//"problemAllocateData3rdLevel-Mvar"; return; endif
+  end do ! model variable
+ end do ! (looping through the HRUs)
+ ! forcing variables 
+ do iHRU=1,nHRU
+  do iVar = 1,maxvarForc
+   allocate(forc_stat(iHRU)%var(iVar)%dat(maxvarStat+1),stat=err)
+   if(err/=0)then; err=20; message=trim(message)//"problemAllocateData3rdLevel-Forc"; return; endif
+  end do ! forcing variables
+ end do ! (looping through the HRUs)
+ ! basin variables 
+ do iVar = 1,maxvarBvar
+  allocate(bvar_stat%var(iVar)%dat(maxvarStat+1),stat=err)
+  if(err/=0)then; err=20; message=trim(message)//"problemAllocateData3rdLevel-Bvar"; return; endif
+ end do ! basin variables
+ ! vertically integrated variables 
+ do iHRU=1,nHRU
+  do iVar = 1,maxvarIntg
+   do iInt = 1,maxIntLayr
+    allocate(intg_stat(iHRU,iInt)%var(iVar)%dat(maxvarStat+1),stat=err)
+    if(err/=0)then; err=20; message=trim(message)//"problemAllocateData3rdLevel-Forc"; return; endif
+   end do ! integration layers
+  end do ! integrtaed variables
+ end do ! (looping through the HRUs)
 
  return
  end subroutine alloc_stats
@@ -136,143 +158,224 @@ contains
  USE data_struc, only:mvar_meta    ! metadata structure for local model variable
  USE data_struc, only:mvar_data    ! timeste data structure for local model variable
  USE data_struc, only:mvar_stat    ! stat data structure for local model variable
+ USE data_struc, only:intg_meta    ! metadata structure for vertically integrated variable
+ USE data_struc, only:intg_stat    ! stat data structure for vertically integrated variable
+ ! lookup structures
+ USE var_lookup, only:maxvarForc   ! number of forcing variables
+ USE var_lookup, only:maxvarMvar   ! number of model variables
+ USE var_lookup, only:maxvarIntg   ! number of vertically integrated variables
+ USE data_struc, only:maxIntLayr   ! number of vertically integrated layers
  ! structures of named variables
- USE var_lookup, only:iLookVarType ! named variables for variable types 
- USE var_lookup, only:iLookStat    ! named variables for output statistics types 
- USE var_lookup, only:maxvarForc   ! # of forcing variables 
- USE var_lookup, only:maxvarMvar   ! # of dynamic model variables 
- USE var_lookup, only:maxvarStats  ! # of output statistics 
- ! index into various data types - fore readability and backward-compatibility
- USE get_ixname_module,only:get_ixForce  ! forcing index function
- USE get_ixname_module,only:get_ixMvar   ! model var index function
  implicit none
  ! dummy variables
  integer(i4b),intent(out)       :: err                            ! error code
  character(*),intent(out)       :: message                        ! error message
- integer(i4b),intent(in)        :: istep                          ! timestep index to compare with o_freq of each variable
+ integer(i4b),intent(in)        :: istep                          ! timestep index to compare with outputFreq of each variable
  integer(i4b),intent(in)        :: iHRU                           ! HRU index
- ! local variables
- integer(i4b)                   :: iVar                           ! index into var_info arrays (for loop)
- integer(i4b)                   :: iStat                          ! index into each dimension of a var_stat array (for loop)
+ ! internals
+ character(256)                 :: cmessage                       ! error message
+ real(dp),allocatable           :: tdata(:)                       ! temporary storage of timestep data
+ integer(i4b)                   :: iVar                           ! index for varaiable loop
+ integer(i4b)                   :: iInt                           ! index for integrted layer loop
+
  ! initialize error control
  err=0; message='compile_stats/'
 
  ! --------------------------------------------
- ! (1) loop through model variables
+ ! Calculate timestep statistics 
  ! --------------------------------------------
-  do iVar=1,maxvarMvar                             ! loop through variables in structure
-   do iStat=1,maxvarStats                          ! loop through output statistics
-
-    if (mvar_meta(iVar)%o_freq(iStat).le.0) cycle  ! do not bother if output flag is off
-    if (mvar_meta(iVar)%vartype.ne.iLookVarType%scalarv) cycle ! only calculate stats for scalar vaiables 
-
-    ! differences between each statistic are (i) algebra, (ii) output frequency
-    select case(iStat)
-     case (iLookStat%inst) ! instantaneous
-      mvar_stat(iHRU)%stat(iVar,iStat) = mvar_data%var(iVar)%dat(1)                                        
-
-     case (iLookStat%mean) ! mean
-      if (mod(mvar_meta(iVar)%o_freq(iStat),iStep).eq.1) mvar_stat(iHRU)%stat(iVar,iStat) = 0. 
-      mvar_stat(iHRU)%stat(iVar,iStat) = mvar_stat(iHRU)%stat(iVar,iStat) + mvar_data%var(iVar)%dat(1) 
-      if (mod(mvar_meta(iVar)%o_freq(iStat),iStep).eq.0) mvar_stat(iHRU)%stat(iVar,iStat) = mvar_stat(iHRU)%stat(iVar,iStat)/mvar_meta(iVar)%o_freq(iStat) 
-
-     case (iLookStat%vari) ! variance
-      if (mod(mvar_meta(iVar)%o_freq(iStat),iStep).eq.1) then
-       mvar_stat(iHRU)%stat(iVar,iStat) = 0 
-       mvar_stat(iHRU)%stat(iVar,maxvarStats+1) = 0 
-      endif
-      mvar_stat(iHRU)%stat(iVar,iStat) = mvar_stat(iHRU)%stat(iVar,iStat) + mvar_data%var(iVar)%dat(1)**2 
-      mvar_stat(iHRU)%stat(iVar,maxvarStats+1) = mvar_stat(iHRU)%stat(iVar,maxvarStats+1) + mvar_data%var(iVar)%dat(1)
-      if (mod(mvar_meta(iVar)%o_freq(iStat),iStep).eq.0) then
-       mvar_stat(iHRU)%stat(ivar,maxvarStats+1) = mvar_stat(iHRU)%stat(iVar,maxvarStats+1)/mvar_meta(iVar)%o_freq(iStat)
-       mvar_stat(iHRU)%stat(iVar,iStat) = mvar_stat(iHRU)%stat(iVar,iStat)/mvar_meta(iVar)%o_freq(iStat) + mvar_stat(iHRU)%stat(iVar,maxvarStats+1) 
-      endif
-
-     case (iLookStat%mini)
-      if (mod(mvar_meta(iVar)%o_freq(iStat),iStep).eq.1) mvar_stat(iHRU)%stat(iVar,iStat) = huge(mvar_stat(iHRU)%stat(iVar,iStat)) 
-      if (mvar_data%var(iVar)%dat(1).le.mvar_stat(iHRU)%stat(iVar,iStat)) mvar_stat(iHRU)%stat(iVar,iStat) = mvar_data%var(iVar)%dat(1)
-
-     case (iLookStat%maxi)
-      if (mod(mvar_meta(iVar)%o_freq(iStat),iStep).eq.1) mvar_stat(iHRU)%stat(iVar,iStat) = -huge(mvar_stat(iHRU)%stat(iVar,iStat)) 
-      if (mvar_data%var(iVar)%dat(1).ge.mvar_stat(iHRU)%stat(iVar,iStat)) mvar_stat(iHRU)%stat(iVar,iStat) = mvar_data%var(iVar)%dat(1)
-
-     case (iLookStat%mode)
-      mvar_stat(iHRU)%stat(iVar,iStat) = -9999. 
-
-     case (iLookStat%geom)
-      if (mod(mvar_meta(iVar)%o_freq(iStat),iStep).eq.1) mvar_stat(iHRU)%stat(iVar,iStat) = 0 
-      mvar_stat(iHRU)%stat(iVar,iStat) = mvar_stat(iHRU)%stat(iVar,iStat) + 1/mvar_data%var(iVar)%dat(1) 
-      if (mod(mvar_meta(iVar)%o_freq(iStat),iStep).eq.0) mvar_stat(iHRU)%stat(iVar,iStat) = mvar_stat(iHRU)%stat(iVar,iStat)**(1/mvar_meta(iVar)%o_freq(iStat))
-
-     case (iLookStat%harm)
-      if (mod(mvar_meta(iVar)%o_freq(iStat),iStep).eq.1) mvar_stat(iHRU)%stat(iVar,iStat) = 0 
-      mvar_stat(iHRU)%stat(iVar,iStat) = mvar_stat(iHRU)%stat(iVar,iStat) * mvar_data%var(iVar)%dat(1) 
-      if (mod(mvar_meta(iVar)%o_freq(iStat),iStep).eq.0) mvar_stat(iHRU)%stat(iVar,iStat) = 1/mvar_stat(iHRU)%stat(iVar,iStat) * mvar_meta(iVar)%o_freq(iStat) 
-
-    endselect
-   enddo ! iStat 
-  enddo ! iVar
-
- ! --------------------------------------------
- ! (2) loop through forcing variables
- ! --------------------------------------------
-  do iVar=1,maxvarForc                            ! loop through variables in structure
-   do iStat=1,maxvarStats                         ! loop through output statistics
-
-    if (forc_meta(iVar)%o_freq(iStat).le.0) cycle ! do not bother if output flag is off
-    if (forc_meta(iVar)%vartype.ne.iLookVarType%scalarv) cycle ! only calculate stats for scalar vaiables 
-
-    select case(iStat)
-     case (iLookStat%inst) ! instantaneous
-      forc_stat(iHRU)%stat(iVar,iStat) = forc_data%var(iVar)                                        
-
-     case (iLookStat%mean) ! mean
-      if (mod(forc_meta(iVar)%o_freq(iStat),iStep).eq.1) forc_stat(iHRU)%stat(iVar,iStat) = 0. 
-      forc_stat(iHRU)%stat(iVar,iStat) = forc_stat(iHRU)%stat(iVar,iStat) + forc_data%var(iVar) 
-      if (mod(forc_meta(iVar)%o_freq(iStat),iStep).eq.0) forc_stat(iHRU)%stat(iVar,iStat) = forc_stat(iHRU)%stat(iVar,iStat)/forc_meta(iVar)%o_freq(iStat) 
-
-     case (iLookStat%vari) ! variance
-      if (mod(forc_meta(iVar)%o_freq(iStat),iStep).eq.1) then
-       forc_stat(iHRU)%stat(iVar,iStat) = 0 
-       forc_stat(iHRU)%stat(iVar,maxvarStats+1) = 0 
-      endif
-      forc_stat(iHRU)%stat(iVar,iStat) = forc_stat(iHRU)%stat(iVar,iStat) + forc_data%var(iVar)**2 
-      forc_stat(iHRU)%stat(iVar,maxvarStats+1) = forc_stat(iHRU)%stat(iVar,maxvarStats+1) + forc_data%var(iVar)
-      if (mod(forc_meta(iVar)%o_freq(iStat),iStep).eq.0) then
-       forc_stat(iHRU)%stat(iVar,maxvarStats+1) = forc_stat(iHRU)%stat(iVar,maxvarStats+1)/forc_meta(iVar)%o_freq(iStat)
-       forc_stat(iHRU)%stat(iVar,iStat) = forc_stat(iHRU)%stat(iVar,iStat)/forc_meta(iVar)%o_freq(iStat) + forc_stat(iHRU)%stat(iVar,maxvarStats+1) 
-      endif
+ ! model variables
+ allocate(tdata(maxvarMvar))                                                           ! allocate structrue to hold the timestep data
+ do iVar = 1,maxvarMvar; tdata(iVar) = mvar_data%var(iVar)%dat(1); enddo               ! store timestep data in structure
+ call calc_stats(mvar_meta,mvar_stat(iHRU),tdata,maxvarMvar,istep,err,cmessage)        ! calculate the model variable stats 
+ if(err/=0)then; message=trim(message)//trim(cmessage)//"Mvar";return; endif           ! error handling
+ deallocate(tdata)                                                                     ! deallocate for next data structure 
  
-     case (iLookStat%mini)
-      if (mod(forc_meta(iVar)%o_freq(iStat),iStep).eq.1) forc_stat(iHRU)%stat(iVar,iStat) = huge(forc_stat(iHRU)%stat(iVar,iStat)) 
-      if (forc_data%var(iVar).le.forc_stat(iHRU)%stat(iVar,iStat)) forc_stat(iHRU)%stat(iVar,iStat) = forc_data%var(iVar)
- 
-     case (iLookStat%maxi)
-      if (mod(forc_meta(iVar)%o_freq(iStat),iStep).eq.1) forc_stat(iHRU)%stat(iVar,iStat) = -huge(forc_stat(iHRU)%stat(iVar,iStat)) 
-      if (forc_data%var(iVar).ge.forc_stat(iHRU)%stat(iVar,iStat)) forc_stat(iHRU)%stat(iVar,iStat) = forc_data%var(iVar)
- 
-     case (iLookStat%mode)
-      forc_stat(iHRU)%stat(iVar,iStat) = -9999. 
+ ! forcing variables
+ allocate(tdata(maxvarForc))                                                           ! allocate structrue to hold the timestep data
+ do iVar = 1,maxvarForc; tdata(iVar) = forc_data%var(iVar); enddo                      ! store timestep data in structure
+ call calc_stats(forc_meta,forc_stat(iHRU),tdata,maxvarForc,istep,err,cmessage)        ! calculate the forcing variable stats 
+ if(err/=0)then; message=trim(message)//trim(cmessage)//"Forc";return; endif           ! error handling
+ deallocate(tdata)                                                                     ! deallocate for next data structure 
 
-     case (iLookStat%geom)
-      if (mod(forc_meta(iVar)%o_freq(iStat),iStep).eq.1) forc_stat(iHRU)%stat(iVar,iStat) = 0 
-      forc_stat(iHRU)%stat(iVar,iStat) = forc_stat(iHRU)%stat(iVar,iStat) + 1/forc_data%var(iVar) 
-      if (mod(forc_meta(iVar)%o_freq(iStat),iStep).eq.0) forc_stat(iHRU)%stat(iVar,iStat) = forc_stat(iHRU)%stat(iVar,iStat)**(1/forc_meta(iVar)%o_freq(iStat))
-
-     case (iLookStat%harm)
-      if (mod(forc_meta(iVar)%o_freq(iStat),iStep).eq.1) forc_stat(iHRU)%stat(iVar,iStat) = 0 
-      forc_stat(iHRU)%stat(iVar,iStat) = forc_stat(iHRU)%stat(iVar,iStat) * forc_data%var(iVar) 
-      if (mod(forc_meta(iVar)%o_freq(iStat),iStep).eq.0) forc_stat(iHRU)%stat(iVar,iStat) = 1/forc_stat(iHRU)%stat(iVar,iStat) * forc_meta(iVar)%o_freq(iStat) 
-
-    endselect
-   enddo ! iStat 
-  enddo ! iVar
-
- ! --------------------------------------------
- ! (X) cleanup 
- ! --------------------------------------------
+ ! vertically integrated variables
+ do iInt = 1,maxIntLayr                                                                ! loop through integration layers
+  allocate(tdata(maxvarIntg))                                                          ! allocate structrue to hold the timestep data
+  do iVar = 1,maxvarIntg                                                               ! loop through integrated variables
+   select case(intg_meta(iVar,iInt)%layertype)
+    case (iLookVarType%midToto)
+     tdata(iVar) = sum(mvar_data%var(iVar)%dat(:))
+    case (iLookVarType%midSnow)
+     tdata(iVar) = sum(mvar_data%var(iVar)%dat(:))
+    case (iLookVarType%midSoil)
+     tdata(iVar) = sum(mvar_data%var(iVar)%dat(:))
+    case default
+     err=20; message=trim(message)//"variable type not found for integration";return; 
+   endselect   
+  enddo ! variable in structure            
+  call calc_stats(intg_meta,intg_stat(iHRU,iInt),tdata,maxvarIntg,istep,err,cmessage)  ! calculate the integrated variable stats 
+  if(err/=0)then; message=trim(message)//trim(cmessage)//"Intg";return; endif          ! error handling
+  deallocate(tdata)                                                                    ! deallocate for next data structure 
+ enddo ! integration layer                     
 
  return
  end subroutine compile_stats
 
+ ! ******************************************************************************************************
+ ! public subroutine compile_basin_stats is called at every model timestep to update/store output statistics 
+ ! from basin-scale variables
+ ! ******************************************************************************************************
+ subroutine compile_basin_stats(istep,err,message)
+ USE nrtype
+ ! data structures
+ USE data_struc, only:bvar_meta    ! metadata structure for basin vars 
+ USE data_struc, only:bvar_data    ! timeste data structure for basin vars
+ USE data_struc, only:bvar_stat    ! stat data structure for basin vars
+ ! lookup structures
+ USE var_lookup, only:maxvarBvar   ! number of basin variables
+ ! structures of named variables
+ implicit none
+ ! dummy variables
+ integer(i4b),intent(out)       :: err         ! error code
+ character(*),intent(out)       :: message     ! error message
+ integer(i4b),intent(in)        :: istep       ! timestep index to compare with outputFreq of each variable
+ ! internals
+ character(256)                 :: cmessage    ! error message
+ real(dp),allocatable           :: tdata(:)    ! temporary storage of timestep data
+ integer(i4b)                   :: iVar        ! index for varaiable loop
+
+ ! initialize error control
+ err=0; message='compile_basin_stats/'
+
+ ! --------------------------------------------
+ ! Calculate timestep statistics 
+ ! --------------------------------------------
+ allocate(tdata(maxvarBvar))                                                           ! allocate structrue to hold the timestep data
+ do iVar = 1,maxvarBvar; tdata(iVar) = bvar_data%var(iVar)%dat(1); enddo               ! store timestep data in structure
+ call calc_stats(bvar_meta,bvar_stat,tdata,maxvarBvar,istep,err,cmessage)              ! calculate the forcing variable stats 
+ if(err/=0)then; message=trim(message)//trim(cmessage);return; endif                   ! error handling
+ deallocate(tdata)                                                                     ! deallocate for next data structure 
+
+ return
+ end subroutine compile_basin_stats
+
+
+ ! ******************************************************************************************************
+ ! Private subroutine calc_stats is a generic fucntion to deal with any variable type.
+ ! Called from compile_stats 
+ ! ******************************************************************************************************
+ subroutine calc_stats(meta,stat,tdata,nvar,istep,err,message)
+ USE nrtype
+ ! data structures
+ USE data_struc, only:var_info        ! type dec for passed meta structure 
+ USE data_struc, only:var_dlength     ! type dec for passed data & stats structures 
+ USE data_struc, only:outputFrequency ! output frequency
+ ! structures of named variables
+ USE var_lookup, only:iLookVarType    ! named variables for variable types 
+ USE var_lookup, only:iLookStat       ! named variables for output statistics types 
+ USE var_lookup, only:maxvarStat      ! # of output statistics 
+ implicit none
+ ! dummy variables
+ integer(i4b),intent(out)                  :: err         ! error code
+ character(*),intent(out)                  :: message     ! error message
+ integer(i4b),intent(in)                   :: nvar        ! number of variables in structure
+ integer(i4b),intent(in)                   :: istep       ! timestep
+ type(var_info),intent(in)                 :: meta(nvar)  ! metadata structure
+ real(dp),intent(in)                       :: tdata(nvar) ! data structure
+ type(var_dlength),intent(inout)           :: stat  ! statistics structure
+ ! internals
+ integer(i4b)                              :: iVar     ! variable loop
+ integer(i4b)                              :: iStat    ! statistics loop
+ ! initialize error control
+ err=0; message='calc_stats/'
+
+ ! ---------------------------------------------
+ ! reset statistics at new frequenncy period 
+ ! ---------------------------------------------
+ if (mod(iStep,outputFrequency).eq.1) then
+  do iVar=1,nvar                                                    ! loop through variables in structure
+   do iStat=1,maxvarStat                                            ! loop through output statistics
+    if (.not.meta(iVar)%stat(iStat)) cycle                          ! do not bother if output flag is off
+    if (meta(iVar)%vartype.ne.iLookVarType%scalarv) cycle           ! only calculate stats for scalar vaiables 
+    select case(iStat)                                              ! act depending on the statistic 
+     case (iLookStat%mean)                                          ! mean over period
+      stat%var(iVar)%dat(iStat) = 0. 
+     case (iLookStat%vari)                                          ! variance over period
+       stat%var(iVar)%dat(iStat) = 0                                ! resets E[X^2] term in variance calculation
+       stat%var(iVar)%dat(maxvarStat+1) = 0                         ! resets E[X]^2 term  
+     case (iLookStat%mini)                                          ! minimum over period
+      stat%var(iVar)%dat(iStat) = huge(stat%var(iVar)%dat(iStat))   ! resets stat at beginning of period
+     case (iLookStat%maxi)                                          ! maximum over period
+      stat%var(iVar)%dat(iStat) = -huge(stat%var(iVar)%dat(iStat))  ! resets stat at beginning of period
+     case (iLookStat%mode)                                          ! mode over period (does not work)
+      stat%var(iVar)%dat(iStat) = -9999.
+     case (iLookStat%harm)                                          ! harmonic mean over period
+      stat%var(iVar)%dat(iStat) = 0                                 ! resets stat at beginning of period
+     case (iLookStat%geom)                                          ! geometric mean over period
+      stat%var(iVar)%dat(iStat) = 0                                 ! resets stat at beginning of period
+     case (iLookStat%totl)                                          ! summation over period
+      stat%var(iVar)%dat(iStat) = 0                                 ! resets stat at beginning of period
+    endselect
+   enddo ! iStat 
+  enddo ! variable 
+ endif
+
+ ! ---------------------------------------------
+ ! Calculate each statistic that is requested by user
+ ! ---------------------------------------------
+ do iVar=1,nvar                                                     ! loop through variables in structure
+  do iStat=1,maxvarStat                                             ! loop through output statistics
+   if (.not.meta(iVar)%stat(iStat)) cycle                           ! do not bother if output flag is off
+   if (meta(iVar)%vartype.ne.iLookVarType%scalarv) cycle            ! only calculate stats for scalar vaiables 
+
+   ! act depending on the statistic 
+   select case(iStat)
+    case (iLookStat%inst) ! instantaneous
+     stat%var(iVar)%dat(iStat) = tdata(iVar)                                        
+    case (iLookStat%mean) ! mean over period
+     stat%var(iVar)%dat(iStat) = stat%var(iVar)%dat(iStat) + tdata(iVar)                    ! adds timestep to sum 
+    case (iLookStat%vari) ! variance over period
+     stat%var(iVar)%dat(iStat) = stat%var(iVar)%dat(iStat) + tdata(iVar)**2                 ! sum into E[X^2] term
+     stat%var(iVar)%dat(maxvarStat+1) = stat%var(iVar)%dat(maxvarStat+1) + tdata(iVar)      ! sum into E[X]^2 term             
+    case (iLookStat%mini) ! minimum over period
+     if (tdata(iVar).le.stat%var(iVar)%dat(iStat)) stat%var(iVar)%dat(iStat) = tdata(iVar)  ! overwrites minimum if warranted
+    case (iLookStat%maxi) ! maximum over period
+     if (tdata(iVar).ge.stat%var(iVar)%dat(iStat)) stat%var(iVar)%dat(iStat) = tdata(iVar)  ! overwrites maximum if warranted
+    case (iLookStat%mode) ! mode over period (does not work)
+     stat%var(iVar)%dat(iStat) = -9999. 
+    case (iLookStat%harm) ! harmonic mean over period
+     stat%var(iVar)%dat(iStat) = stat%var(iVar)%dat(iStat) + 1/tdata(iVar)                  ! into summation
+    case (iLookStat%geom) ! geometric mean over period
+     stat%var(iVar)%dat(iStat) = stat%var(iVar)%dat(iStat) * tdata(iVar)                    ! into summation
+    case (iLookStat%totl)                                                                   ! summation over period
+     stat%var(iVar)%dat(iStat) = stat%var(iVar)%dat(iStat) + tdata(iVar)                    ! into summation
+   endselect
+  enddo ! iStat 
+ enddo ! iVar
+
+ ! ---------------------------------------------
+ ! finalize statistics at end of frequenncy period 
+ ! ---------------------------------------------
+ if (mod(iStep,outputFrequency).eq.0) then
+  do iVar=1,nvar                                                                                                         ! loop through variables in structure
+   do iStat=1,maxvarStat                                                                                                 ! loop through output statistics
+    if (.not.meta(iVar)%stat(iStat)) cycle                                                                               ! do not bother if output flag is off
+    if (meta(iVar)%vartype.ne.iLookVarType%scalarv) cycle                                                                ! only calculate stats for scalar vaiables 
+    select case(iStat)                                                                                                   ! act depending on the statistic 
+     case (iLookStat%mean)                                                                                               ! mean over period
+      stat%var(iVar)%dat(iStat) = stat%var(iVar)%dat(iStat)/outputFrequency                                              ! normalize sum into mean at end of period 
+     case (iLookStat%vari)                                                                                               ! variance over period
+      stat%var(ivar)%dat(maxvarStat+1) = stat%var(iVar)%dat(maxvarStat+1)/outputFrequency                                ! E[X] term
+      stat%var(iVar)%dat(iStat) = stat%var(iVar)%dat(iStat)/outputFrequency + stat%var(iVar)%dat(maxvarStat+1)           ! full variance
+     case (iLookStat%harm)                                                                                               ! harmonic mean over period
+      stat%var(iVar)%dat(iStat) = 1/stat%var(iVar)%dat(iStat) * outputFrequency                                          ! normalize at end of period
+     case (iLookStat%geom)                                                                                               ! geometric mean over period
+      stat%var(iVar)%dat(iStat) = stat%var(iVar)%dat(iStat)**(1/outputFrequency)                                         ! normalize at end of period
+    endselect
+   enddo ! iStat 
+  enddo ! variable 
+ endif
+
+ return
+ end subroutine calc_stats
 end module module_output
