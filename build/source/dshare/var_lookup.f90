@@ -562,26 +562,25 @@ MODULE var_lookup
  ! ***********************************************************************************************************
  type, public :: iLook_intg
   ! midToto
-  integer(i4b)    :: mLayerTemp           = 1
-  integer(i4b)    :: mLayerVolFracAir     = 2
-  integer(i4b)    :: mLayerVolFracIce     = 3
-  integer(i4b)    :: mLayerVolFracLiq     = 4
-  integer(i4b)    :: mLayerVolHtCapBulk   = 5
-  integer(i4b)    :: mLayerMeltFreeze     = 6
-  integer(i4b)    :: mLayerInfilFreeze    = 7
+  integer(i4b)    :: iLayerTemp           = 1
+  integer(i4b)    :: iLayerVolFracAir     = 2
+  integer(i4b)    :: iLayerVolFracIce     = 3
+  integer(i4b)    :: iLayerVolFracLiq     = 4
+  integer(i4b)    :: iLayerVolHtCapBulk   = 5
+  integer(i4b)    :: iLayerMeltFreeze     = 6
+  integer(i4b)    :: iLayerInfilFreeze    = 7
   ! midSnow
-  integer(i4b)    :: mLayerThetaResid     = 8
-  integer(i4b)    :: mLayerPoreSpace      = 9
+  integer(i4b)    :: iLayerThetaResid     = 8
+  integer(i4b)    :: iLayerPoreSpace      = 9
   ! midSoil
-  integer(i4b)    :: mLayerRootDensity    = 10 
-  integer(i4b)    :: mLayerCompress       = 11
-  integer(i4b)    :: mLayerInitTranspire  = 12
-  integer(i4b)    :: mLayerTranspire      = 13
-  integer(i4b)    :: mLayerInitQMacropore = 14
-  integer(i4b)    :: mLayerQMacropore     = 15
-  integer(i4b)    :: mLayerInitBaseflow   = 16
-  integer(i4b)    :: mLayerBaseflow       = 17
-  integer(i4b)    :: mLayerColumnInflow   = 18
+  integer(i4b)    :: iLayerRootDensity    = 10 
+  integer(i4b)    :: iLayerCompress       = 11
+  integer(i4b)    :: iLayerInitTranspire  = 12
+  integer(i4b)    :: iLayerTranspire      = 13
+  integer(i4b)    :: iLayerInitQMacropore = 14
+  integer(i4b)    :: iLayerQMacropore     = 15
+  integer(i4b)    :: iLayerInitBaseflow   = 16
+  integer(i4b)    :: iLayerBaseflow       = 17
  endtype iLook_intg
 
  ! ***********************************************************************************************************
@@ -669,7 +668,7 @@ MODULE var_lookup
  type(iLook_varType), public,parameter :: iLookVarType  =ilook_varType (  1,  2,  3,  4,  5,  6,  7,  8,  9)
  type(iLook_stat),    public,parameter :: iLookStat     =ilook_stat    (  1,  2,  3,  4,  5,  6,  7,  8,  9)
  type(iLook_intg),    public,parameter :: iLookIntg     =ilook_intg    (  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, &
-                                                                         11, 12, 13, 14, 15, 16, 17, 18)
+                                                                         11, 12, 13, 14, 15, 16, 17)
 
  ! define maximum number of variables of each type
  integer(i4b),parameter,public :: maxvarDecisions= 38
@@ -683,8 +682,7 @@ MODULE var_lookup
  integer(i4b),parameter,public :: maxvarBpar     = 5
  integer(i4b),parameter,public :: maxvarBvar     = 11
  integer(i4b),parameter,public :: maxvarTypes    = 9
- integer(i4b),parameter,public :: maxvarStats    = 9
- integer(i4b),parameter,public :: maxvarIntg     = 18
+ integer(i4b),parameter,public :: maxvarIntg     = 17
 
 
 END MODULE var_lookup

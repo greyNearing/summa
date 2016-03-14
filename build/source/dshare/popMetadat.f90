@@ -8,6 +8,7 @@ contains
  USE nrtype
  USE multiconst,only:integerMissing
  ! data structures
+ USE data_struc, only: maxIntLayr ! maximum number of integration layers
  USE data_struc, only: var_info   ! data type for metadata structure
  USE data_struc, only: int_info   ! data type for metadata structure
  USE data_struc, only: time_meta  ! data structure for time metadata
@@ -38,6 +39,7 @@ contains
  integer(i4b),intent(out)       :: err                            ! error code
  character(*),intent(out)       :: message                        ! error message
  ! local variables
+ integer(i4b)                   :: iInt                           ! loop index for integration layers
  character(LEN=256)             :: cmessage                       ! error message of downwind routine
  ! initialize error control
  err=0; message='popMetadat/'
@@ -131,7 +133,7 @@ contains
  mpar_meta(iLookPARAM%k_snow)                = var_info('k_snow'                , 'hydraulic conductivity of snow'                                   , 'm s-1'           , get_ixVarType('scalarv'), integerMissing, .false.)
  mpar_meta(iLookPARAM%mw_exp)                = var_info('mw_exp'                , 'exponent for meltwater flow'                                      , '-'               , get_ixVarType('scalarv'), integerMissing, .false.)
  ! turbulent heat fluxes
- mqpar_meta(iLookPARAM%z0Snow)                = var_info('z0Snow'                , 'roughness length of snow'                                         , 'm'               , get_ixVarType('scalarv'), integerMissing, .false.)
+ mpar_meta(iLookPARAM%z0Snow)                = var_info('z0Snow'                , 'roughness length of snow'                                         , 'm'               , get_ixVarType('scalarv'), integerMissing, .false.)
  mpar_meta(iLookPARAM%z0Soil)                = var_info('z0Soil'                , 'roughness length of bare soil below the canopy'                   , 'm'               , get_ixVarType('scalarv'), integerMissing, .false.)
  mpar_meta(iLookPARAM%z0Canopy)              = var_info('z0Canopy'              , 'roughness length of the canopy'                                   , 'm'               , get_ixVarType('scalarv'), integerMissing, .false.)
  mpar_meta(iLookPARAM%zpdFraction)           = var_info('zpdFraction'           , 'zero plane displacement / canopy height'                          , '-'               , get_ixVarType('scalarv'), integerMissing, .false.)
@@ -518,23 +520,25 @@ contains
  ! -----
  ! * vertically integrated model variables ...
  ! ---------------------
- intg_meta(iLookINTG%mLayerTemp)          = int_info('mLayerTemp'          , 'temperature of each layer'                                        , 'K'         , get_ixVarType('scalarv'), get_ixVarType('midToto'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerVolFracAir)    = int_info('mLayerVolFracAir'    , 'volumetric fraction of air'                                       , '-'         , get_ixVarType('scalarv'), get_ixVarType('midToto'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerVolFracIce)    = int_info('mLayerVolFracIce'    , 'volumetric fraction of ice'                                       , '-'         , get_ixVarType('scalarv'), get_ixVarType('midToto'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerVolFracLiq)    = int_info('mLayerVolFracLiq'    , 'volumetric fraction of liquid water'                              , '-'         , get_ixVarType('scalarv'), get_ixVarType('midToto'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerVolHtCapBulk)  = int_info('mLayerVolHtCapBulk'  , 'volumetric heat capacity'                                         , 'J m-3 K-1' , get_ixVarType('scalarv'), get_ixVarType('midToto'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerMeltFreeze)    = int_info('mLayerMeltFreeze'    , 'ice content change from melt/freeze'                              , 'kg m-3'    , get_ixVarType('scalarv'), get_ixVarType('midToto'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerInfilFreeze)   = int_info('mLayerInfilFreeze'   , 'ice content change by freezing infiltrating flux'                 , 'kg m-3'    , get_ixVarType('scalarv'), get_ixVarType('midToto'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerThetaResid)    = int_info('mLayerThetaResid'    , 'residual volumetric water content'                                , '-'         , get_ixVarType('scalarv'), get_ixVarType('midSnow'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerPoreSpace)     = int_info('mLayerPoreSpace'     , 'total pore space'                                                 , '-'         , get_ixVarType('scalarv'), get_ixVarType('midSnow'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerRootDensity)   = int_info('mLayerRootDensity'   , 'fraction of roots in each soil layer'                             , '-'         , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerCompress)      = int_info('mLayerCompress'      , 'change in volumetric water content due to compression of soil'    , '-'         , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerInitTranspire) = int_info('mLayerInitTranspire' , 'transpiration loss from each soil layer at the start-of-step'     , 'm s-1'     , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerTranspire)     = int_info('mLayerTranspire'     , 'transpiration loss from each soil layer'                          , 'm s-1'     , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerInitQMacropore)= int_info('mLayerInitQMacropore', 'liquid flux from micropores to macropores at the start-of-step'   , 'm s-1'     , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerQMacropore)    = int_info('mLayerQMacropore'    , 'liquid flux from micropores to macropores'                        , 'm s-1'     , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerInitBaseflow)  = int_info('mLayerInitBaseflow'  , 'baseflow at the start of the time step'                           , 'm s-1'     , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing)
- intg_meta(iLookINTG%mLayerBaseflow)      = int_info('mLayerBaseflow'      , 'baseflow'                                                         , 'm s-1'     , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing)
+ do iInt = 1,maxIntLayr 
+  intg_meta(iLookINTG%iLayerTemp,iInt)          = int_info('iLayerTemp'          , 'temperature of each layer'                                        , 'K'         , get_ixVarType('scalarv'), get_ixVarType('midToto'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerVolFracAir,iInt)    = int_info('iLayerVolFracAir'    , 'volumetric fraction of air'                                       , '-'         , get_ixVarType('scalarv'), get_ixVarType('midToto'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerVolFracIce,iInt)    = int_info('iLayerVolFracIce'    , 'volumetric fraction of ice'                                       , '-'         , get_ixVarType('scalarv'), get_ixVarType('midToto'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerVolFracLiq,iInt)    = int_info('iLayerVolFracLiq'    , 'volumetric fraction of liquid water'                              , '-'         , get_ixVarType('scalarv'), get_ixVarType('midToto'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerVolHtCapBulk,iInt)  = int_info('iLayerVolHtCapBulk'  , 'volumetric heat capacity'                                         , 'J m-3 K-1' , get_ixVarType('scalarv'), get_ixVarType('midToto'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerMeltFreeze,iInt)    = int_info('iLayerMeltFreeze'    , 'ice content change from melt/freeze'                              , 'kg m-3'    , get_ixVarType('scalarv'), get_ixVarType('midToto'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerInfilFreeze,iInt)   = int_info('iLayerInfilFreeze'   , 'ice content change by freezing infiltrating flux'                 , 'kg m-3'    , get_ixVarType('scalarv'), get_ixVarType('midToto'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerThetaResid,iInt)    = int_info('iLayerThetaResid'    , 'residual volumetric water content'                                , '-'         , get_ixVarType('scalarv'), get_ixVarType('midSnow'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerPoreSpace,iInt)     = int_info('iLayerPoreSpace'     , 'total pore space'                                                 , '-'         , get_ixVarType('scalarv'), get_ixVarType('midSnow'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerRootDensity,iInt)   = int_info('iLayerRootDensity'   , 'fraction of roots in each soil layer'                             , '-'         , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerCompress,iInt)      = int_info('iLayerCompress'      , 'change in volumetric water content due to compression of soil'    , '-'         , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerInitTranspire,iInt) = int_info('iLayerInitTranspire' , 'transpiration loss from each soil layer at the start-of-step'     , 'm s-1'     , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerTranspire,iInt)     = int_info('iLayerTranspire'     , 'transpiration loss from each soil layer'                          , 'm s-1'     , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerInitQMacropore,iInt)= int_info('iLayerInitQMacropore', 'liquid flux from micropores to macropores at the start-of-step'   , 'm s-1'     , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerQMacropore,iInt)    = int_info('iLayerQMacropore'    , 'liquid flux from micropores to macropores'                        , 'm s-1'     , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerInitBaseflow,iInt)  = int_info('iLayerInitBaseflow'  , 'baseflow at the start of the time step'                           , 'm s-1'     , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+  intg_meta(iLookINTG%iLayerBaseflow,iInt)      = int_info('iLayerBaseflow'      , 'baseflow'                                                         , 'm s-1'     , get_ixVarType('scalarv'), get_ixVarType('midSoil'), integerMissing, .false., integerMissing, integerMissing, integerMissing)
+ enddo
 
  ! -----
  ! * call routine to read the user control file specifying desired model outputs
@@ -552,6 +556,7 @@ contains
  USE multiconst,only:integerMissing
  ! data structures
  USE data_struc, only: outputFrequency ! stored otput frequency 
+ USE data_struc, only: maxIntLayr      ! maximum number of integrated layers
  USE data_struc, only: time_meta  ! data structure for time metadata
  USE data_struc, only: forc_meta  ! data structure for forcing metadata
  USE data_struc, only: type_meta  ! data structure for categorical metadata
@@ -594,12 +599,14 @@ contains
  integer(i4b)                   :: unt             ! file unit
  character(LEN=512),allocatable :: charlines(:)    ! vector of character strings
  character(LEN=64),allocatable  :: lineWords(:)    ! vector to parse textline
+ character(LEN=64)              :: vName           ! string for indexing into integrations of model variables
  integer(i4b)                   :: statistic       ! stat index read from file 
  integer(i4b)                   :: begi            ! beginning depth for vertical integration 
  integer(i4b)                   :: endi            ! ending depth for vertical integration
  ! indices
  integer(i4b)                   :: vLine           ! index for loop through variables
  integer(i4b)                   :: vDex            ! index into type lists
+ integer(i4b)                   :: iInt            ! index into integrated layers 
  ! flags
  logical(lgt)                   :: midSnow ! logical flags to turn on index variables if they are not requested
  logical(lgt)                   :: midSoil ! logical flags to turn on index variables if they are not requested
@@ -719,7 +726,7 @@ contains
    if(err/=0) then; message=trim(message)//trim(cmessage); return; endif
    cycle
   endif
-  
+
   ! attribute variables
   vDex = get_ixAttr(trim(lineWords(1)))
   if (vDex.gt.0) then
@@ -727,16 +734,21 @@ contains
    if(err/=0) then; message=trim(message)//trim(cmessage); return; endif
    cycle
   endif
-  
+
   ! vertically integrated variables
   vDex = get_ixIntg(trim(lineWords(1)))
   if (vDex.gt.0) then
    do iInt = 1,maxIntLayr
     if (intg_meta(vDex,iInt)%startInt.eq.integerMissing) then
-     call popStat(intg_meta(vDex,iInt),statistic,midSnow,midSoil,midToto,ifcSnow,ifcSoil,ifcToto,err,cmessage)
+     call popStat_int(intg_meta(vDex,iInt),statistic,midSnow,midSoil,midToto,ifcSnow,ifcSoil,ifcToto,err,cmessage)    ! GREY GSN can add the stuff around this to the called subroutine. Is tehre any way to get this all into one subroutine? Could use an interface, but this doesn't actually help with anything, since we know what needs to be called each time.
      if(err/=0) then; message=trim(message)//trim(cmessage); return; endif
      read(linewords(5),'(i1)') intg_meta(vDex,iInt)%startInt
      read(linewords(7),'(i1)') intg_meta(vDex,iInt)%stopInt
+     vName = intg_meta(vDex,iInt)%varname(2:64)
+     vName = 'm'//trim(vName)
+     intg_meta(vDex,iInt)%mVarID = get_ixMvar(trim(vName))
+     intg_meta(vDex,iInt)%varname = trim(intg_meta(vDex,iInt)%varname)//'_'//trim(linewords(5))//'_'//trim(linewords(7))
+     exit
     endif
    enddo
 
@@ -774,7 +786,6 @@ contains
  return
  end subroutine read_output_file
 
-
  ! ********************************************************************************************
  ! Subroutine popStat for populating the meta_data structures with information read in from file.
  ! This routine is called by read_output_file
@@ -796,14 +807,13 @@ contains
  logical(lgt),intent(inout)     :: ifcSnow     ! logical flags to turn on index variables if they are not requested
  logical(lgt),intent(inout)     :: ifcSoil     ! logical flags to turn on index variables if they are not requested
  logical(lgt),intent(inout)     :: ifcToto     ! logical flags to turn on index variables if they are not requested
- ! local variables 
- 
+
  ! initiate error handling
  err=0; message='popStat/'
 
  ! add specified output frequency from file to meta data structure
  meta%stat(statistic) = .true.   ! non-layer varaibles are turned on according to file instructions
- 
+
  ! turn on the index variables if layered outputs are requensted 
  selectcase(meta%vartype)
   case(iLookVarType%midSnow,iLookVarType%midSoil,iLookVarType%midToto, & 
@@ -833,5 +843,64 @@ contains
 
  return
  end subroutine popStat
+
+ ! ********************************************************************************************
+ ! Subroutine popStat for populating the meta_data structures with information read in from file.
+ ! This routine is called by read_output_file
+ ! ********************************************************************************************
+ subroutine popStat_int(meta,statistic,midSnow,midSoil,midToto,ifcSnow,ifcSoil,ifcToto,err,message)
+ USE nrtype
+ USE data_struc,only:int_info                  ! meta_data type declaration
+ USE var_lookup,only:iLookVarType              ! variable type lookup structure
+ USE var_lookup,only:iLookStat                 ! output statistic lookup structure
+ implicit none
+ ! dummy variables
+ integer(i4b),intent(in)        :: statistic   ! output statistic
+ type(int_info),intent(inout)   :: meta        ! dummy meta_data structure
+ integer(i4b),intent(out)       :: err         ! error code
+ character(*),intent(out)       :: message     ! error message
+ logical(lgt),intent(inout)     :: midSnow     ! logical flags to turn on index variables if they are not requested
+ logical(lgt),intent(inout)     :: midSoil     ! logical flags to turn on index variables if they are not requested
+ logical(lgt),intent(inout)     :: midToto     ! logical flags to turn on index variables if they are not requested
+ logical(lgt),intent(inout)     :: ifcSnow     ! logical flags to turn on index variables if they are not requested
+ logical(lgt),intent(inout)     :: ifcSoil     ! logical flags to turn on index variables if they are not requested
+ logical(lgt),intent(inout)     :: ifcToto     ! logical flags to turn on index variables if they are not requested
+ ! local variables 
+
+ ! initiate error handling
+ err=0; message='popStat/'
+
+ ! add specified output frequency from file to meta data structure
+ meta%stat(statistic) = .true.   ! non-layer varaibles are turned on according to file instructions
+
+ ! turn on the index variables if layered outputs are requensted 
+ selectcase(meta%vartype)
+  case(iLookVarType%midSnow,iLookVarType%midSoil,iLookVarType%midToto, & 
+       iLookVarType%ifcSnow,iLookVarType%ifcSoil,iLookVarType%ifcToto)
+   ! spit an error if the user requested a non-instantaneous layered output
+   if (statistic.ne.iLookStat%inst) then     
+    err=20; message=trim(message)//'layered vars must be instantaneous:'//trim(meta%varname)
+   endif
+  ! force appropriate layer indexes 
+  selectcase(meta%vartype)      
+   case (iLookVarType%midSnow)                
+    midSnow = .true.           
+   case (iLookVarType%midSoil)                     
+    midSoil = .true.           
+   case (iLookVarType%midToto)                    
+    midToto = .true.           
+   case (iLookVarType%ifcSnow)                   
+    ifcSnow = .true.           
+   case (iLookVarType%ifcSoil)                  
+    ifcSoil = .true.           
+   case (iLookVarType%ifcToto)                 
+    ifcToto = .true.           
+   case default
+    err=20; message=trim(message)//trim(meta%varname)//'variable type not found'
+  endselect ! variable type
+ endselect
+
+ return
+ end subroutine popStat_int
 
 end module popMetadat_module

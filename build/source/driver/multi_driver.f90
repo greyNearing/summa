@@ -57,6 +57,7 @@ USE read_force_module,only:read_force                       ! module to read mod
 USE derivforce_module,only:derivforce                       ! module to compute derived forcing data
 USE modelwrite_module,only:writeAttrb,writeParam            ! module to write model attributes and parameters
 USE modelwrite_module,only:writeForce                       ! module to write model forcing data
+USE modelwrite_module,only:writeInteg                       ! module to write integrated output data
 USE modelwrite_module,only:writeModel,writeBasin            ! module to write model output
 USE coupled_em_module,only:coupled_em                       ! module to run the coupled energy and mass model
 USE groundwatr_module,only:groundwatr                       ! module to simulate regional groundwater balance
@@ -185,6 +186,7 @@ call summa_SetDirsUndPhiles(summaFileManagerFile,err,message); call handle_err(e
 doJacobian=.false.
 ! initialize the output flag
 ncid=integerMissing
+
 
 ! *****************************************************************************
 ! (2) read model metadata
@@ -449,7 +451,6 @@ do istep=1,numtim
   mvar_hru(iHRU)%var(iLookMVAR%mLayerColumnInflow)%dat(:) = 0._dp
  end do
 
-
  ! ****************************************************************************
  ! (8) loop through HRUs
  ! ****************************************************************************
@@ -584,7 +585,8 @@ do istep=1,numtim
    call writeForce(iHRU,kstep,err,message); call handle_err(err,message)
    ! write the model output to the NetCDF file
    call writeModel(iHRU,kstep,err,message); call handle_err(err,message)
-   !if(istep>6) call handle_err(20,'stopping on a specified step: after call to writeModel')
+   ! write the vertically integrated output to the NetCDF file
+   call writeInteg(iHRU,kstep,err,message); call handle_err(err,message)
   endif
 
   ! increment the model indices

@@ -23,8 +23,8 @@ MODULE data_struc
  USE nrtype
  USE multiconst,only:integerMissing
  implicit none
- integer(i4b), parameter :: numStats = 9
- integer(i4b), parameter :: maxIntLayr = 10 
+ integer(i4b), public, parameter :: maxVarStat = 9
+ integer(i4b), public, parameter :: maxIntLayr = 10 
  private
  ! ***********************************************************************************************************
  ! Define the model decisions
@@ -74,8 +74,8 @@ MODULE data_struc
   integer(i4b)                           :: vartype=0                ! variable type (1=scalar,2=wLength,3=midSnow,4=midSoil,5=midToto,6=ifcSnow,7=ifcSoil,8=ifcToto,9=routing)
   ! the following are vectors for each possible output tatistic
   ! the stats codes are: 1=instantaneous, 2=mean, 3=variance, 4=min, 5=max, 6=mode, 7=geometric, 8=harmonic
-  integer(i4b),dimension(numStats)       :: ncVarID=-999             ! netcdf variable id 
-  logical(lgt),dimension(numStats)       :: stat=.false.             ! output flag 
+  integer(i4b),dimension(maxVarStat)     :: ncVarID=-999             ! netcdf variable id 
+  logical(lgt),dimension(maxVarStat)     :: stat=.false.             ! output flag 
  endtype var_info
  ! define arrays of metadata
  type(var_info),pointer,save,public      :: time_meta(:) => null()   ! model time information
@@ -92,15 +92,16 @@ MODULE data_struc
  ! ***********************************************************************************************************
  ! define derived type for model variables, including name, decription, and units
  type,public :: int_info
-  character(len=64)                :: varname=''     ! variable name
-  character(len=128)               :: vardesc=''     ! variable description
-  character(len=64)                :: varunit=''     ! variable units
-  integer(i4b)                     :: vartype=0      ! variable type
-  integer(i4b)                     :: layertype=0    ! variable type
-  integer(i4b),dimension(numStats) :: ncVarID=-999   ! netcdf variable id 
-  logical(lgt),dimension(numStats) :: stat=.false.   ! output flag 
-  integer(i4b)                     :: startInt=-9999 ! start depth for integration
-  integer(i4b)                     :: stopInt=-9999  ! stop depth for integration
+  character(len=64)                  :: varname=''     ! variable name
+  character(len=128)                 :: vardesc=''     ! variable description
+  character(len=64)                  :: varunit=''     ! variable units
+  integer(i4b)                       :: vartype=0      ! variable type
+  integer(i4b)                       :: layertype=0    ! variable type
+  integer(i4b),dimension(maxVarStat) :: ncVarID=-999   ! netcdf variable id 
+  logical(lgt),dimension(maxVarStat) :: stat=.false.   ! output flag 
+  integer(i4b)                       :: startInt=-9999 ! start depth for integration
+  integer(i4b)                       :: stopInt=-9999  ! stop depth for integration
+  integer(i4b)                       :: mVarID         ! index into the mvar structure
  endtype int_info
  type(int_info),pointer,save,public :: intg_meta(:,:) => null()   ! vertically integrated variables
  ! ***********************************************************************************************************

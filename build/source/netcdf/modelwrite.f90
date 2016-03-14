@@ -28,6 +28,7 @@ public::writeAttrb
 public::writeParam
 public::writeModel
 public::writeBasin
+public::writeInteg
 ! define dimension lengths
 integer(i4b),parameter      :: maxSpectral=2              ! maximum number of spectral bands
 contains
@@ -136,10 +137,10 @@ contains
  subroutine writeForce(iHRU,istep,err,message)
  USE data_struc,only:ncid                                  ! ID for netcdf output file 
  USE data_struc,only:forc_stat,forc_meta                   ! forcing data structures
+ USE data_struc,only:maxVarStat                           ! number of output statistics
  USE var_lookup,only:iLookFORCE                            ! identifies element of the forcing structure
  USE var_lookup,only:iLookSTAT                             ! identifies output statistic
  USE var_lookup,only:maxvarForc                            ! loop sizes (to avoid using size() on a pointer)
- USE var_lookup,only:maxvarStats                          ! number of output statistics
  implicit none
  ! declare dummy variables
  integer(i4b), intent(in)    :: iHRU                       ! hydrologic response unit
@@ -169,7 +170,7 @@ contains
  ! loop through model forcing variables
  do iforce=1,maxvarForc
   ! loop through output statistics
-  do istat=1,maxvarStats
+  do istat=1,maxVarStat 
    ! ignore the time variable (used as a coordinate variable above)
    if(forc_meta(iforce)%varname == 'time') cycle
    ! check that the variable is desired
@@ -191,12 +192,12 @@ contains
  USE data_struc,only:ncid                                  ! ID for netcdf output file 
  USE data_struc,only:indx_data,indx_meta                   ! index data structures
  USE data_struc,only:mvar_stat,mvar_data,mvar_meta         ! model data structures
+ USE data_struc,only:maxVarStat                            ! number of output statistics
  USE var_lookup,only:iLookINDEX                            ! identifies element of the index structure
  USE get_ixname_module,only:get_varTypeName                ! string names of different data types for error message
  USE var_lookup,only:iLookVarType                          ! look up for type case select 
  USE var_lookup,only:iLookSTAT                             ! identifies output statistic
  USE var_lookup,only:maxvarIndx,maxvarMvar                 ! loop sizes (to avoid using size() on a pointer)
- USE var_lookup,only:maxvarStats                           ! number of output statistics
  implicit none
  ! declare dummy variables
  integer(i4b), intent(in)   :: iHRU                       ! hydrologic response unit
@@ -250,7 +251,7 @@ contains
  ! ----------------------------
  do imodel=1,maxvarMvar
   ! loop through output statistics
-  do istat=1,maxvarStats
+  do istat=1,maxVarStat 
    ! check that the variable is desired
    if (.not.mvar_meta(imodel)%stat(istat)) cycle
    ! initialize message
@@ -283,11 +284,11 @@ contains
  subroutine writeBasin(istep,err,message)
  USE data_struc,only:ncid                                  ! ID for netcdf output file 
  USE data_struc,only:bvar_data,bvar_meta,bvar_stat         ! model data structures
+ USE data_struc,only:maxVarStat                            ! loop sizes (to avoid using size() on a pointer)
  USE get_ixname_module,only:get_varTypeName                ! string names of different data types for error message
  USE var_lookup,only:iLookVarType                          ! look up for type case select 
  USE var_lookup,only:iLookSTAT                             ! identifies output statistic
  USE var_lookup,only:maxvarBvar                            ! loop sizes (to avoid using size() on a pointer)
- USE var_lookup,only:maxvarStats                           ! loop sizes (to avoid using size() on a pointer)
  implicit none
  ! declare dummy variables
  integer(i4b), intent(in)    :: istep                      ! model time step
@@ -303,7 +304,7 @@ contains
  ! ----------------------------
  do imodel=1,maxvarBvar
   ! loop through output statistics
-  do istat=1,maxvarStats
+  do istat=1,maxVarStat 
    ! check that the variable is desired
    if (.not.bvar_meta(imodel)%stat(istat)) cycle
    ! initialize message
@@ -326,6 +327,48 @@ contains
 
  end subroutine writeBasin
 
+ ! **********************************************************************************************************
+ ! public subroutine writeInteg: write vertically integrated model variables
+ ! **********************************************************************************************************
+ subroutine writeInteg(iHRU,istep,err,message)
+ USE data_struc,only:ncid                                  ! ID for netcdf output file 
+ USE data_struc,only:intg_stat,intg_meta                   ! model data structures
+ USE data_struc,only:maxVarStat                            ! number of output statistics
+ USE data_struc,only:maxIntLayr                            ! number of integrated layers
+ USE var_lookup,only:maxVarIntg                            ! loop sizes (to avoid using size() on a pointer)
+ USE var_lookup,only:iLookIntg                             ! identifies element of the index structure
+ USE var_lookup,only:iLookVarType                          ! look up for type case select 
+ USE var_lookup,only:iLookSTAT                             ! identifies output statistic
+ USE get_ixname_module,only:get_varTypeName                ! string names of different data types for error message
+ implicit none
+ ! declare dummy variables
+ integer(i4b), intent(in)   :: iHRU                       ! hydrologic response unit
+ integer(i4b), intent(in)   :: istep                      ! model time step
+ integer(i4b),intent(out)   :: err                        ! error code
+ character(*),intent(out)   :: message                    ! error message
+ ! local variables
+ integer(i4b)               :: iVar                       ! loop through model variables
+ integer(i4b)               :: iInt                       ! loop through integrated variables
+ integer(i4b)               :: iStat                      ! loop through output statistics
+ ! initialize error control
+ err=0;message="writeInteg/"
+
+ ! loop through integrated variables
+ ! ----------------------------
+ do iVar=1,maxVarIntg  ! loop through variables
+  do iInt=1,maxIntLayr  ! loop through integrated layers
+   do iStat=1,maxVarStat  ! loop through output statistics
+    if (.not.intg_meta(iVar,iInt)%stat(iStat)) cycle ! check that the variable is desired
+     message=trim(message)//trim(intg_meta(iVar,iInt)%varname)//'/'
+     err = nf90_put_var(ncid,intg_meta(iVar,iInt)%ncVarID(iStat),(/intg_stat(iHRU,iInt)%var(iVar)%dat(iStat)/), &
+                        start=(/iHRU,istep/),count=(/1,1/))
+     call netcdf_err(err,message); if (err/=0) return
+     message="writeInteg/"
+   enddo  ! looping through output statistics
+  enddo ! integrated layers
+ enddo  ! looping through model variables
+
+ end subroutine writeInteg
 
  ! **********************************************************************************************************
  ! private subroutine netcdf_err: error control
