@@ -140,7 +140,6 @@ contains
   do iint=1,maxIntLayr
    do istat=1,maxVarStat ! loop through different output statistics
     if (.not.intg_meta(ivar,iint)%stat(istat)) cycle
-print*,ivar,iint,istat,trim(intg_meta(ivar,iint)%varname) 
     call def_variab(trim(infile),(/hru_DimName,Timestep_DimName/),intg_meta(ivar,iint)%varname,intg_meta(ivar,iint)%vardesc,intg_meta(ivar,iint)%varunit,istat,ncVarID,nf90_double,err,cmessage)           
     if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
     intg_meta(ivar,iint)%ncVarID(istat) = ncVarID

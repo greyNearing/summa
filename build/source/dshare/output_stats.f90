@@ -152,19 +152,23 @@ contains
  USE nrtype
  ! data structures
  USE data_struc, only:forc_meta    ! metadata structure for forcing 
- USE data_struc, only:forc_data    ! timeste data structure for forcing
+ USE data_struc, only:forc_data    ! timestep data structure for forcing
  USE data_struc, only:forc_stat    ! stat data structure for forcing
  USE data_struc, only:mvar_meta    ! metadata structure for local model variable
- USE data_struc, only:mvar_data    ! timeste data structure for local model variable
+ USE data_struc, only:mvar_data    ! timestep data structure for local model variable
  USE data_struc, only:mvar_stat    ! stat data structure for local model variable
  USE data_struc, only:intg_meta    ! metadata structure for vertically integrated variable
  USE data_struc, only:intg_stat    ! stat data structure for vertically integrated variable
+ USE data_struc, only:indx_data    ! timestep data structure for layer indexes
  ! lookup structures
  USE var_lookup, only:maxvarForc   ! number of forcing variables
  USE var_lookup, only:maxvarMvar   ! number of model variables
  USE var_lookup, only:maxvarIntg   ! number of vertically integrated variables
- USE data_struc, only:maxIntLayr   ! number of vertically integrated layers
  USE var_lookup, only:iLookVarType ! named variables for type indexes 
+ USE var_lookup, only:iLookMvar    ! model variable indexes 
+ USE var_lookup, only:iLookIndex   ! model variable indexes 
+ USE data_struc, only:maxIntLayr   ! number of vertically integrated layers
+ ! 
  ! structures of named variables
  implicit none
  ! dummy variables
@@ -177,6 +181,12 @@ contains
  real(dp)                       :: tdata                          ! temporary storage of timestep data
  integer(i4b)                   :: iVar                           ! index for varaiable loop
  integer(i4b)                   :: iInt                           ! index for integrted layer loop
+ real(dp)                       :: begi,endi                      ! temporary integration start/stop points 
+ integer(i4b)                   :: nLayers,nSnow                  ! number of layers in snow/soil column
+ real(dp)                       :: tdepth,layDepth                ! temporary depth markers for integration
+ integer(i4b)                   :: iLay                           ! index for integration loop
+ real(dp),allocatable           :: layers(:)                      ! temporary storage for layered data to feed into integration
+ real(dp),allocatable           :: layData(:)                     ! temporary storage for layered data to feed into integration
 
  ! initialize error control
  err=0; message='compile_stats/'
@@ -201,19 +211,72 @@ contains
  ! vertically integrated variables
  do iVar = 1,maxvarIntg                                                                ! loop through integrated variables
   do iInt = 1,maxIntLayr                                                               ! loop through integration layers
-   if (intg_meta(iVar,iInt)%mVarID.le.0) cycle                                         ! skip if this variable is not used for any statistic
-   select case(intg_meta(iVar,iInt)%layertype)
-    case (iLookVarType%midToto)
-     tdata = sum(mvar_data%var(intg_meta(iVar,iInt)%mVarID)%dat(:))
-    case (iLookVarType%midSnow)
-     tdata = sum(mvar_data%var(intg_meta(iVar,iInt)%mVarID)%dat(:))
-    case (iLookVarType%midSoil)
-     tdata = sum(mvar_data%var(intg_meta(iVar,iInt)%mVarID)%dat(:))
+   if (intg_meta(iVar,iInt)%mVarID.le.0) cycle                                         ! skip if this variable is not used for any stat
+   select case (intg_meta(iVar,iInt)%layertype)
+    case (iLookVarType%midToto) 
+     nLayers = indx_data%var(iLookIndex%nLayers)%dat(1)
+     allocate(layers(nLayers),layData(nLayers))
+     layers  = mvar_data%var(iLookMvar%iLayerHeight)%dat
+     layData = mvar_data%var(intg_meta(iVar,iInt)%mVarID)%dat
+
+    case (iLookVarType%midSnow) 
+     nLayers = indx_data%var(iLookIndex%nSnow)%dat(1)
+     allocate(layers(nLayers),layData(nLayers))
+     layers  = mvar_data%var(iLookMvar%iLayerHeight)%dat(0:nLayers-1) 
+     layData = mvar_data%var(intg_meta(iVar,iInt)%mVarID)%dat(0:nLayers-1) 
+
+    case (iLookVarType%midSoil) 
+     nLayers = indx_data%var(iLookIndex%nSoil)%dat(1)
+     nSnow   = indx_data%var(iLookIndex%nSnow)%dat(1)
+     allocate(layers(nLayers),layData(nLayers))
+     layers  = mvar_data%var(iLookMvar%iLayerHeight)%dat(nSnow:nSnow+nLayers-1) 
+     layData = mvar_data%var(intg_meta(iVar,iInt)%mVarID)%dat(nSnow:nSnow+nLayers-1) 
+
     case default
-     err=20; message=trim(message)//"variable type not found for integration";return; 
-   endselect   
+     err=20; message= trim(message)//'layertype not found:'//trim(intg_meta(iVar,iInt)%varname); return;
+   endselect 
+
+   tdata = 0.
+   tdepth = 0
+   begi = intg_meta(iVar,iInt)%startInt; begi = begi/100
+   endi = intg_meta(iVar,iInt)%stopInt; endi = endi/100
+   if (begi.lt.layers(0)) then
+    err=20
+    message=trim(message)//'integration depth out of range:'//trim(intg_meta(iVar,iInt)%varname)
+    return
+   else if (endi.gt.layers(nLayers)) then 
+    err=20
+    message=trim(message)//'integration depth out of range:'//trim(intg_meta(iVar,iInt)%varname)
+    return
+   endif
+
+   do iLay = 1,nLayers
+    if ((begi.le.layers(iLay)).and.(begi.ge.layers(iLay-1))) then    ! integration starts in layer
+     if ((endi.le.layers(iLay)).and.(endi.ge.layers(iLay-1))) then   ! integration contains whole layer
+      layDepth = endi - begi
+      tdepth   = endi - begi
+      tdata    = tdata + layData(iLay)*layDepth
+     else                                                            ! only first part of integration in layer
+      layDepth = layers(iLay)-begi
+      tdepth   = tdepth + layDepth
+      tdata    = tdata + layData(iLay)*layDepth
+     endif 
+    else if ((endi.le.layers(iLay)).and.(endi.ge.layers(iLay-1))) then  ! integration stops in layer
+     layDepth  = endi - layers(iLay-1) 
+     tdepth    = tdepth + layDepth
+     tdata     = tdata + layData(iLay)*layDepth
+    else if ((begi.le.layers(iLay-1)).and.(endi.ge.layers(iLay))) then ! integration contains layer   
+     layDepth  = layers(iLay) - layers(iLay-1)
+     tdepth    = tdepth + layDepth
+     tdata     = tdata + layData(iLay)*layDepth
+    endif
+   enddo
+   tdata = tdata/tdepth
+
    call calc_stats(intg_meta(iVar,iInt)%stat,intg_meta(iVar,iInt)%vartype,intg_stat(iHRU,iInt)%var(iVar),tdata,istep,err,cmessage)  ! calculate the integrated variable stats 
    if(err/=0)then; message=trim(message)//trim(cmessage)//"Intg";return; endif          ! error handling
+
+   deallocate(layers,layData)
   enddo ! integration layer                     
  enddo ! variable in structure            
 

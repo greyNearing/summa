@@ -742,8 +742,8 @@ contains
     if (intg_meta(vDex,iInt)%startInt.eq.integerMissing) then
      call popStat_int(intg_meta(vDex,iInt),statistic,midSnow,midSoil,midToto,ifcSnow,ifcSoil,ifcToto,err,cmessage)    ! GREY GSN can add the stuff around this to the called subroutine. Is tehre any way to get this all into one subroutine? Could use an interface, but this doesn't actually help with anything, since we know what needs to be called each time.
      if(err/=0) then; message=trim(message)//trim(cmessage); return; endif
-     read(linewords(5),'(i1)') intg_meta(vDex,iInt)%startInt
-     read(linewords(7),'(i1)') intg_meta(vDex,iInt)%stopInt
+     read(linewords(5),*) intg_meta(vDex,iInt)%startInt
+     read(linewords(7),*) intg_meta(vDex,iInt)%stopInt
      vName = intg_meta(vDex,iInt)%varname(2:64)
      vName = 'm'//trim(vName)
      intg_meta(vDex,iInt)%mVarID = get_ixMvar(trim(vName))
