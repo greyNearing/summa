@@ -392,6 +392,7 @@ contains
  integer(i4b)               :: iStat                      ! loop through output statistics
  integer(i4b)               :: ncid,varid                 ! netcdf indexes 
  integer(i4b)               :: nLayers                    ! total number of layers
+ real(dp),dimension(:),allocatable :: tdata               ! temporary data holder
 
  ! initialize error control
  err=0;message="writeInteg/"
@@ -401,19 +402,37 @@ contains
 
  ! loop through integrated variables
  ! ----------------------------
+ allocate(tdata(nLayers))
  do iVar = 1,maxVarIntg
   do iStat = 1,maxVarStat 
    if (.not.intg_meta(iVar)%statFlg(iFreq,iStat)) cycle
    do iLay = 1,nLayers
-    ncid  = intg_meta(iVar)%ncFilID(iFreq)
-    varid = intg_meta(iVar)%ncVarID(iFreq,iStat,iLay)
-    err = nf90_put_var(ncid,varid,(/intg_stat(iHRU,iFreq,iLay)%var(iVar)%dat(iStat)/),start=(/iHRU,1,iStep/),count=(/1,nLayers,1/)) 
-    call netcdf_err(err,message)
-    if (err/=0) then; message=trim(message)//trim(intg_meta(iVar)%varName)//'/'; return; endif
-   enddo  ! iLay 
+    tdata(iLay) = intg_stat(iHRU,iFreq,iLay)%var(iVar)%dat(iStat) 
+   enddo
+   ncid  = intg_meta(iVar)%ncFilID(iFreq)
+   varid = intg_meta(iVar)%ncVarID(iFreq,iStat,1)
+   err = nf90_put_var(ncid,varid,(/tdata/),start=(/iHRU,1,iStep/),count=(/1,nLayers,1/)) 
+   call netcdf_err(err,message)
+   if (err/=0) then; message=trim(message)//trim(intg_meta(iVar)%varName)//'/'; return; endif
   enddo  ! iStat 
  enddo  ! iVar 
+ deallocate(tdata)
 
+! ! loop through integrated variables
+! ! ----------------------------
+! do iVar = 1,maxVarIntg
+!  do iStat = 1,maxVarStat 
+!   if (.not.intg_meta(iVar)%statFlg(iFreq,iStat)) cycle
+!   do iLay = 1,nLayers
+!    ncid  = intg_meta(iVar)%ncFilID(iFreq)
+!    varid = intg_meta(iVar)%ncVarID(iFreq,iStat,iLay)
+!    err = nf90_put_var(ncid,varid,(/intg_stat(iHRU,iFreq,iLay)%var(iVar)%dat(iStat)/),start=(/iHRU,1,iStep/),count=(/1,nLayers,1/)) 
+!    call netcdf_err(err,message)
+!    if (err/=0) then; message=trim(message)//trim(intg_meta(iVar)%varName)//'/'; return; endif
+!   enddo  ! iLay 
+!  enddo  ! iStat 
+! enddo  ! iVar 
+!
  return
  end subroutine writeInteg
 

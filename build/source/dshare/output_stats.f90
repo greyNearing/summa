@@ -296,14 +296,14 @@ contains
     ! all midpoints
     case (iLookVarType%midToto)
      if (nSnow.gt.0) then
-      tdata = sum(mvar_data%var(intg_meta(iVar)%mVarID)%dat(0:nSnow-1))/nSnow
+      tdata = sum(mvar_data%var(intg_meta(iVar)%mVarID)%dat(1:nSnow))/nSnow
      else
       tdata = 0
      endif
      call calc_stats(intg_meta(iVar),intg_stat(iHRU,iFreq,1)%var(iVar),tdata,iFreq,iStep,err,cmessage)
      if(err/=0)then; message=trim(message)//trim(cmessage)//"Forc";return; endif         
      do iLay = 1,nSoil
-      tdata = mvar_data%var(intg_meta(iVar)%mvarID)%dat(nSnow-1+iLay)
+      tdata = mvar_data%var(intg_meta(iVar)%mvarID)%dat(nSnow+iLay)
       call calc_stats(intg_meta(iVar),intg_stat(iHRU,iFreq,1+iLay)%var(iVar),tdata,iFreq,iStep,err,cmessage)
       if(err/=0)then; message=trim(message)//trim(cmessage)//"Forc";return; endif         
      enddo

@@ -177,12 +177,10 @@ contains
   do iFreq = 1,nFreq
    do iStat = 1,maxVarStat 
     if (.not.intg_meta(iVar)%statFlg(iFreq,iStat)) cycle
-    do iLyr = 1,nLayers
-     call def_variab(ncid(iFreq),(/hru_DimName,Layers_DimName,Timestep_DimName/),intg_meta(iVar),iStat,iLyr,ncVarID,nf90_double,err,cmessage)
-     if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-     intg_meta(iVar)%ncFilID(iFreq)                 = ncid(iFreq)
-     intg_meta(iVar)%ncVarID(iFreq,iStat,iLyr) = ncVarID
-    enddo ! looping through output statistics
+    call def_variab(ncid(iFreq),(/hru_DimName,Layers_DimName,Timestep_DimName/),intg_meta(iVar),iStat,noLyr,ncVarID,nf90_double,err,cmessage)
+    if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
+    intg_meta(iVar)%ncFilID(iFreq)         = ncid(iFreq)
+    intg_meta(iVar)%ncVarID(iFreq,iStat,1) = ncVarID
    enddo ! looping through output frequencies
   enddo ! loop through integration layers 
  enddo ! loop through model variables
