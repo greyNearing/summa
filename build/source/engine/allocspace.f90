@@ -50,7 +50,6 @@ contains
  USE data_struc,only:time_meta,forc_meta,attr_meta,type_meta        ! metadata structures
  USE data_struc,only:mpar_meta,mvar_meta,indx_meta                  ! metadata structures
  USE data_struc,only:bpar_meta,bvar_meta,intg_meta                  ! metadata structures
- USE data_struc,only:maxintlayr                                     ! maximum number of integration depths
  implicit none
  ! declare variables
  integer(i4b),intent(out)             :: err         ! error code
@@ -71,7 +70,7 @@ contains
  ! allocate metadata structures
  allocate(time_meta(maxvarTime),forc_meta(maxvarForc),attr_meta(maxvarAttr),type_meta(maxvarType),&
           mpar_meta(maxvarMpar),mvar_meta(maxvarMvar),indx_meta(maxvarIndx),&
-          bpar_meta(maxvarBpar),bvar_meta(maxvarBvar),intg_meta(maxvarIntg,maxIntLayr),stat=err)
+          bpar_meta(maxvarBpar),bvar_meta(maxvarBvar),intg_meta(maxvarIntg),stat=err)
  if(err/=0)then; err=20; message=trim(message)//"problemAllocateMetadata"; return; endif
  end subroutine init_metad
 

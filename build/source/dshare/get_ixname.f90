@@ -37,7 +37,6 @@ public::get_ixIntg
 public::get_ixVarType
 public::get_varTypeName
 public::get_statName
-! GREY GSN public::put_ncVarID
 contains
 
  ! *******************************************************************************************************************
@@ -750,23 +749,23 @@ contains
  integer(i4b)             :: get_ixintg              ! index of the named variable
  ! get the index of the named variables
  select case(trim(varName))
-  case('iLayerTemp'          ); get_ixintg = iLookINTG%iLayerTemp
-  case('iLayerVolFracAir'    ); get_ixintg = iLookINTG%iLayerVolFracAir
-  case('iLayerVolFracIce'    ); get_ixintg = iLookINTG%iLayerVolFracIce
-  case('iLayerVolFracLiq'    ); get_ixintg = iLookINTG%iLayerVolFracLiq
-  case('iLayerVolHtCapBulk'  ); get_ixintg = iLookINTG%iLayerVolHtCapBulk
-  case('iLayerMeltFreeze'    ); get_ixintg = iLookINTG%iLayerMeltFreeze
-  case('iLayerInfilFreeze'   ); get_ixintg = iLookINTG%iLayerInfilFreeze
-  case('iLayerThetaResid'    ); get_ixintg = iLookINTG%iLayerThetaResid
-  case('iLayerPoreSpace'     ); get_ixintg = iLookINTG%iLayerPoreSpace
-  case('iLayerRootDensity'   ); get_ixintg = iLookINTG%iLayerRootDensity
-  case('iLayerCompress'      ); get_ixintg = iLookINTG%iLayerCompress
-  case('iLayerInitTranspire' ); get_ixintg = iLookINTG%iLayerInitTranspire
-  case('iLayerTranspire'     ); get_ixintg = iLookINTG%iLayerTranspire
-  case('iLayerInitQMacropore'); get_ixintg = iLookINTG%iLayerInitQMacropore
-  case('iLayerQMacropore'    ); get_ixintg = iLookINTG%iLayerQMacropore
-  case('iLayerInitBaseflow'  ); get_ixintg = iLookINTG%iLayerInitBaseflow
-  case('iLayerBaseflow'      ); get_ixintg = iLookINTG%iLayerBaseflow
+  case('intgLayerTemp'          ); get_ixintg = iLookINTG%intgLayerTemp
+  case('intgLayerVolFracAir'    ); get_ixintg = iLookINTG%intgLayerVolFracAir
+  case('intgLayerVolFracIce'    ); get_ixintg = iLookINTG%intgLayerVolFracIce
+  case('intgLayerVolFracLiq'    ); get_ixintg = iLookINTG%intgLayerVolFracLiq
+  case('intgLayerVolHtCapBulk'  ); get_ixintg = iLookINTG%intgLayerVolHtCapBulk
+  case('intgLayerMeltFreeze'    ); get_ixintg = iLookINTG%intgLayerMeltFreeze
+  case('intgLayerInfilFreeze'   ); get_ixintg = iLookINTG%intgLayerInfilFreeze
+  case('intgLayerThetaResid'    ); get_ixintg = iLookINTG%intgLayerThetaResid
+  case('intgLayerPoreSpace'     ); get_ixintg = iLookINTG%intgLayerPoreSpace
+  case('intgLayerRootDensity'   ); get_ixintg = iLookINTG%intgLayerRootDensity
+  case('intgLayerCompress'      ); get_ixintg = iLookINTG%intgLayerCompress
+  case('intgLayerInitTranspire' ); get_ixintg = iLookINTG%intgLayerInitTranspire
+  case('intgLayerTranspire'     ); get_ixintg = iLookINTG%intgLayerTranspire
+  case('intgLayerInitQMacropore'); get_ixintg = iLookINTG%intgLayerInitQMacropore
+  case('intgLayerQMacropore'    ); get_ixintg = iLookINTG%intgLayerQMacropore
+  case('intgLayerInitBaseflow'  ); get_ixintg = iLookINTG%intgLayerInitBaseflow
+  case('intgLayerBaseflow'      ); get_ixintg = iLookINTG%intgLayerBaseflow
   ! get to here if cannot find the variable
   case default
    get_ixintg = integerMissing
@@ -812,70 +811,17 @@ contains
  character(LEN=4)         :: get_statName        ! index of the named variable type list
  ! get the index of the named variables
  select case(istat)
+  case(iLookStat%totl);get_statName='totl'
   case(iLookStat%inst);get_statName='inst'
   case(iLookStat%mean);get_statName='mean'
   case(iLookStat%vari);get_statName='vari'
   case(iLookStat%mini);get_statName='mini'
   case(iLookStat%maxi);get_statName='maxi'
   case(iLookStat%mode);get_statName='mode'
-  case(iLookStat%harm);get_statName='harm'
-  case(iLookStat%geom);get_statName='geom'
-  case(iLookStat%totl);get_statName='totl'
   ! get to here if cannot find the variable
   case default
    get_statName = 'unkn'
  endselect
  end function get_statName
-
-! GSN GREY
-! ! *******************************************************************************************************************
-! ! public function put_ncVarID: assign netcdf variable id for a specific varaible of unknown type
-! ! *******************************************************************************************************************
-! subroutine put_ncVarID(varName,ncVarID,istat,err,message)
-!  USE data_struc,only:attr_meta ! attributes meta structure
-!  USE data_struc,only:type_meta ! type decs meta structure
-!  USE data_struc,only:mpar_meta ! model parameters meta structure
-!  USE data_struc,only:bpar_meta ! basin parameters meta structure
-!  USE data_struc,only:forc_meta ! forcing variables meta structure
-!  USE data_struc,only:indx_meta ! index variables meta structure
-!  USE data_struc,only:mvar_meta ! model variables meta structure
-!  USE data_struc,only:bvar_meta ! basin variablesmeta structure
-!  implicit none
-!  ! dummy vars
-!  character(*), intent(in)        :: varName       ! variable name input 
-!  integer(i4b), intent(in)        :: ncVarID       ! netcdf variable id
-!  integer(i4b), intent(out)       :: err           ! error
-!  character(LEN=256), intent(out) :: message ! error message
-!  integer(i4b)                    :: istat         ! statistic index
-!  ! local vars
-!  integer(i4b)                    :: vDex          ! index in structure
-!  ! initialize error message
-!  err=0; message='put_ncVarID/'
-!  ! do nothign if the ncVarID is missing
-!  if (ncVarID.lt.0) return  
-!  ! try all structures
-!  vDex = get_ixAttr  (trim(varName))
-!  if (vDex.gt.0) then; attr_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
-!  vDex = get_ixType  (trim(varName))
-!  if (vDex.gt.0) then; type_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
-!  vDex = get_ixParam (trim(varName))
-!  if (vDex.gt.0) then; mpar_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
-!  vDex = get_ixBpar  (trim(varName))
-!  if (vDex.gt.0) then; bpar_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
-!  vDex = get_ixForce (trim(varName))
-!  if (vDex.gt.0) then; forc_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
-!  vDex = get_ixIndex (trim(varName))
-!  if (vDex.gt.0) then; indx_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
-!  vDex = get_ixMvar  (trim(varName))
-!  if (vDex.gt.0) then; mvar_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
-!  vDex = get_ixBvar  (trim(varName))
-!  if (vDex.gt.0) then; bvar_meta(vDex)%ncVarID(istat) = ncVarID; return; endif;
-!  vDex = get_ixIntg  (trim(varName))
-!  if (vDex.gt.0) then; intg_meta(vDex,iInt)%ncVarID(istat) = ncVarID; return; endif;
-!  ! if we get this far then the variable was not found
-!  err=20 
-!  message=trim(message)//'variable not found='
-!  message=trim(message)//trim(varName) 
-! end subroutine put_ncVarID
 
 end module get_ixname_module

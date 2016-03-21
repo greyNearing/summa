@@ -562,25 +562,25 @@ MODULE var_lookup
  ! ***********************************************************************************************************
  type, public :: iLook_intg
   ! midToto
-  integer(i4b)    :: iLayerTemp           = 1
-  integer(i4b)    :: iLayerVolFracAir     = 2
-  integer(i4b)    :: iLayerVolFracIce     = 3
-  integer(i4b)    :: iLayerVolFracLiq     = 4
-  integer(i4b)    :: iLayerVolHtCapBulk   = 5
-  integer(i4b)    :: iLayerMeltFreeze     = 6
-  integer(i4b)    :: iLayerInfilFreeze    = 7
+  integer(i4b)    :: intgLayerTemp           = 1
+  integer(i4b)    :: intgLayerVolFracAir     = 2
+  integer(i4b)    :: intgLayerVolFracIce     = 3
+  integer(i4b)    :: intgLayerVolFracLiq     = 4
+  integer(i4b)    :: intgLayerVolHtCapBulk   = 5
+  integer(i4b)    :: intgLayerMeltFreeze     = 6
+  integer(i4b)    :: intgLayerInfilFreeze    = 7
   ! midSnow
-  integer(i4b)    :: iLayerThetaResid     = 8
-  integer(i4b)    :: iLayerPoreSpace      = 9
+  integer(i4b)    :: intgLayerThetaResid     = 8
+  integer(i4b)    :: intgLayerPoreSpace      = 9
   ! midSoil
-  integer(i4b)    :: iLayerRootDensity    = 10 
-  integer(i4b)    :: iLayerCompress       = 11
-  integer(i4b)    :: iLayerInitTranspire  = 12
-  integer(i4b)    :: iLayerTranspire      = 13
-  integer(i4b)    :: iLayerInitQMacropore = 14
-  integer(i4b)    :: iLayerQMacropore     = 15
-  integer(i4b)    :: iLayerInitBaseflow   = 16
-  integer(i4b)    :: iLayerBaseflow       = 17
+  integer(i4b)    :: intgLayerRootDensity    = 10 
+  integer(i4b)    :: intgLayerCompress       = 11
+  integer(i4b)    :: intgLayerInitTranspire  = 12
+  integer(i4b)    :: intgLayerTranspire      = 13
+  integer(i4b)    :: intgLayerInitQMacropore = 14
+  integer(i4b)    :: intgLayerQMacropore     = 15
+  integer(i4b)    :: intgLayerInitBaseflow   = 16
+  integer(i4b)    :: intgLayerBaseflow       = 17
  endtype iLook_intg
 
  ! ***********************************************************************************************************
@@ -602,15 +602,13 @@ MODULE var_lookup
  ! (11) structure for looking up statistics 
  ! ***********************************************************************************************************
  type, public :: iLook_stat
-  integer(i4b)    :: inst   =  1 ! instantaneous 
-  integer(i4b)    :: mean   =  2 ! mean over period
-  integer(i4b)    :: vari   =  3 ! variance over period
-  integer(i4b)    :: mini   =  4 ! minimum over period 
-  integer(i4b)    :: maxi   =  5 ! maximum over period
-  integer(i4b)    :: mode   =  6 ! mode over period
-  integer(i4b)    :: harm   =  7 ! harmonic mean
-  integer(i4b)    :: geom   =  8 ! geometric mean 
-  integer(i4b)    :: totl   =  9 ! summation 
+  integer(i4b)    :: totl   =  1 ! summation 
+  integer(i4b)    :: inst   =  2 ! instantaneous 
+  integer(i4b)    :: mean   =  3 ! mean over period
+  integer(i4b)    :: vari   =  4 ! variance over period
+  integer(i4b)    :: mini   =  5 ! minimum over period 
+  integer(i4b)    :: maxi   =  6 ! maximum over period
+  integer(i4b)    :: mode   =  7 ! mode over period
  endtype iLook_stat
 
  ! ***********************************************************************************************************
@@ -666,7 +664,7 @@ MODULE var_lookup
  type(iLook_bvar),    public,parameter :: iLookBVAR     =ilook_bvar    (  1,  2,  3,  4,  5,  6,  7,  8,  9, 10,&
                                                                          11)
  type(iLook_varType), public,parameter :: iLookVarType  =ilook_varType (  1,  2,  3,  4,  5,  6,  7,  8,  9)
- type(iLook_stat),    public,parameter :: iLookStat     =ilook_stat    (  1,  2,  3,  4,  5,  6,  7,  8,  9)
+ type(iLook_stat),    public,parameter :: iLookStat     =ilook_stat    (  1,  2,  3,  4,  5,  6,  7)
  type(iLook_intg),    public,parameter :: iLookIntg     =ilook_intg    (  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, &
                                                                          11, 12, 13, 14, 15, 16, 17)
 
@@ -681,7 +679,6 @@ MODULE var_lookup
  integer(i4b),parameter,public :: maxvarIndx     = 10
  integer(i4b),parameter,public :: maxvarBpar     = 5
  integer(i4b),parameter,public :: maxvarBvar     = 11
- integer(i4b),parameter,public :: maxvarTypes    = 9
  integer(i4b),parameter,public :: maxvarIntg     = 17
 
 

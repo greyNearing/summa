@@ -37,27 +37,25 @@ character(len=32),parameter :: midTotoAndTime_DimName = 'midTotoAndTime'   ! dim
 character(len=32),parameter :: ifcSnowAndTime_DimName = 'ifcSnowAndTime'   ! dimension name for ifcSnow-time
 character(len=32),parameter :: ifcSoilAndTime_DimName = 'ifcSoilAndTime'   ! dimension name for ifcSoil-time
 character(len=32),parameter :: ifcTotoAndTime_DimName = 'ifcTotoAndTime'   ! dimension name for ifcToto-time
-character(len=32),parameter :: Layers_DimName         = 'IntgLayers'       ! dimension name for integrated layers
 contains
 
  ! **********************************************************************************************************
  ! public subroutine def_output: define model output file
  ! **********************************************************************************************************
  subroutine def_output(nHRU,infile,err,message)
- USE multiconst,only:integerMissing
- USE data_struc,only:nFreq,outFreq                 ! output frequencies
+ USE data_struc,only:maxFreq                       ! maximum number of output frequencies
  USE data_struc,only:forc_meta,attr_meta,type_meta ! metadata structures
  USE data_struc,only:mpar_meta,mvar_meta,indx_meta ! metadata structures
  USE data_struc,only:bpar_meta,bvar_meta,intg_meta ! metadata structures
  USE data_struc,only:indx_data                     ! for number of soil layers
  USE data_struc,only:model_decisions
- USE data_struc,only:ix_soil                       ! named variable to identify a soil layer
  USE data_struc,only:maxVarStat                    ! # of options for output statistics 
- USE var_lookup,only:maxVarMvar,maxVarMpar,maxVarBvar,maxVarBpar,maxVarForc   
- USE var_lookup,only:maxVarType,maxVarIndx,maxVarAttr,maxVarIntg   
+ USE multiconst,only:integerMissing
  USE var_lookup,only:iLookVarType                  ! look up for type case select 
  USE var_lookup,only:iLookSTAT                     ! look up for output variable statistics 
  USE var_lookup,only:iLookIndex                    ! index into index structure 
+ USE var_lookup,only:maxVarMvar,maxVarMpar,maxVarBvar,maxVarBpar,maxVarForc   
+ USE var_lookup,only:maxVarType,maxVarIndx,maxVarAttr,maxVarIntg   
 
  ! declare dummy variables
  integer(i4b), intent(in)        :: nHRU           ! number of HRUs
@@ -71,79 +69,110 @@ contains
  integer(i4b)                    :: iLyr           ! loop through integrated layers
  integer(i4b)                    :: iFreq          ! loop through output frequencies
  integer(i4b)                    :: ncVarID        ! netcdf variable ID
- integer(i4b),dimension(nFreq)   :: ncid           ! array for stroing netcdf file ids
- character(len=5)                :: fstring        ! string to hold model output freuqnecy
- character(len=1000)             :: fname          ! temporary filename
- integer(i4b),parameter          :: modelTime=1    ! model timestep output frequency
- integer(i4b),parameter          :: noStat=0       ! flag for no statistic to be appended to variable name
- integer(i4b),parameter          :: noLyr=0        ! flag for no layer to be appended to variable name
  character(len=256)              :: cmessage       ! temporary error message
- integer(i4b)                    :: nLayers        ! number of integrated layers
+ integer(i4b)                    :: nFreq          ! number of output files
+ integer(i4b),dimension(maxFreq) :: freqs          ! output frequencies
+ character(len=1000)             :: fname
+ integer(i4b),parameter          :: modelTime=1    ! model timestep output frequency
+ character(len=5)                :: fstring        ! string to hold model output freuqnecy
+ integer(i4b),parameter          :: noStat=0       ! flag for no statistic to be appended to variable name
+ integer(i4b),dimension(maxFreq) :: ncid           ! array for stroing netcdf file ids
 
  ! initialize errors
  err=0; message="def_output/"
 
- ! number of layers
- nLayers = count(indx_data%var(iLookINDEX%layerType)%dat==ix_soil)+1
+ ! **********************************************************************************************************
+ ! ***** count number of files
+ ! **********************************************************************************************************
+ ! initialize output frequency
+ nFreq = 1
+ freqs = integerMissing
+ freqs(1) = modelTime
+
+ ! model variables
+ do iVar = 1,maxVarMvar
+  call countFrequencies(mvar_meta(iVar)%outFreq,nFreq,freqs,err,cmessage)
+  if (err.ne.0) then; message=trim(message)//trim(cmessage); return; endif
+ enddo
+
+ ! forcing variables
+ do iVar = 1,maxVarForc
+  call countFrequencies(forc_meta(iVar)%outFreq,nFreq,freqs,err,cmessage)
+  if (err.ne.0) then; message=trim(message)//trim(cmessage); return; endif
+ enddo
+
+ ! basin variables
+ do iVar = 1,maxVarBvar
+  call countFrequencies(bvar_meta(iVar)%outFreq,nFreq,freqs,err,cmessage)
+  if (err.ne.0) then; message=trim(message)//trim(cmessage); return; endif
+ enddo
+
+ ! vertiallcy integrated variables
+ do iVar = 1,maxVarIntg
+  call countFrequencies(intg_meta(iVar)%outFreq,nFreq,freqs,err,cmessage)
+  if (err.ne.0) then; message=trim(message)//trim(cmessage); return; endif
+ enddo
 
  ! **********************************************************************************************************
  ! ***** create initial files
  ! **********************************************************************************************************
- do iFreq = 1,nFreq
-  write(fstring,'(i5)') outFreq(iFreq)
-  fstring = adjustl(fstring)
+ fname = trim(infile)//'_1.nc'
+ call ini_create(nHRU,trim(fname),ncid(1),err,cmessage)
+ do iFreq = 2,nFreq
+  write(freqs(iFreq),*) fstring
   fname = trim(infile)//'_'//trim(fstring)//'.nc'
   call ini_create(nHRU,trim(fname),ncid(iFreq),err,cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-  print*,'Created output file:',trim(fname)
  enddo
+
+stop 1234
 
  ! **********************************************************************************************************
  ! ***** define variables/attributes that are only output once
  ! **********************************************************************************************************
  ! define model decisions
- do iVar = 1,size(model_decisions)
+ do iVar=1,size(model_decisions)
   if(model_decisions(iVar)%iDecision.ne.integerMissing)then
-   call put_attrib(ncid(modelTime),model_decisions(iVar)%cOption,model_decisions(iVar)%cDecision,err,cmessage)
+   call put_attrib(ncid(1),model_decisions(iVar)%cOption,model_decisions(iVar)%cDecision,err,cmessage)
    if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
   endif
- enddo
+ end do
 
  ! define local attributes
- do iVar = 1,maxVarAttr
-  if (.not.attr_meta(iVar)%statFlg(modelTime,iLookSTAT%inst)) cycle
-  call def_variab(ncid(modelTime),(/hru_DimName/),attr_meta(iVar),noStat,noLyr,ncVarID,nf90_double,err,cmessage)
+ do iVar=1,maxVarAttr
+  if (.not.attr_meta(iVar)%statFlg(iLookSTAT%inst)) cycle
+  call def_variab(ncid(1),(/hru_DimName/),attr_meta(iVar),noStat,ncVarID,nf90_double,err,cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-  attr_meta(iVar)%ncFilID(modelTime)                  = ncid(modelTime)
+  attr_meta(iVar)%ncFilID                             = ncid(modelTime)
   attr_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1) = ncVarID
- enddo  
+ end do  
 
  ! define local classification of veg, soil, etc.
- do iVar = 1,maxVarType
-  if (.not.type_meta(iVar)%statFlg(modelTime,iLookSTAT%inst)) cycle
-  call def_variab(ncid(1),(/hru_DimName/),type_meta(iVar),noStat,noLyr,ncVarID,nf90_int,err,cmessage)
+ do iVar=1,maxVarType
+  if (.not.type_meta(iVar)%statFlg(iLookSTAT%inst)) cycle
+  call def_variab(ncid(1),(/hru_DimName/),type_meta(iVar),noStat,ncVarID,nf90_int,err,cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-  type_meta(iVar)%ncFilID(modelTime)                  = ncid(modelTime)
+  type_meta(iVar)%ncFilID                             = ncid(modelTime)
   type_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1) = ncVarID
- enddo  
+ end do  
 
  ! define local column model parameters
- do iVar = 1,maxVarMpar
-  if (.not.mpar_meta(iVar)%statFlg(modelTime,iLookSTAT%inst)) cycle
-  call def_variab(ncid(1),(/hru_DimName/),mpar_meta(iVar),noStat,noLyr,ncVarID,nf90_double,err,cmessage)
+ do iVar=1,maxVarMpar
+  if (.not.mpar_meta(iVar)%statFlg(iLookSTAT%inst)) cycle
+  call def_variab(ncid(1),(/hru_DimName/),mpar_meta(iVar),noStat,ncVarID,nf90_double,err,cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-  mpar_meta(iVar)%ncFilID(modelTime)                  = ncid(modelTime)
+  mpar_meta(iVar)%ncFilID                             = ncid(modelTime)
   mpar_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1) = ncVarID
- enddo  
+ end do  
 
  ! define basin-average model parameters
- do iVar = 1,maxVarBpar
-  if (.not.bpar_meta(iVar)%statFlg(modelTime,iLookSTAT%inst)) cycle
-  call def_variab(ncid(1),(/scalar_DimName/),bpar_meta(iVar),noStat,noLyr,ncVarID,nf90_double,err,cmessage)
+ do iVar=1,maxVarBpar
+  if (.not.bpar_meta(iVar)%statFlg(iLookSTAT%inst)) cycle
+  call def_variab(ncid(1),(/scalar_DimName/),bpar_meta(iVar),noStat,ncVarID,nf90_double,err,cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-  bpar_meta(iVar)%ncFilID(modelTime)                  = ncid(modelTime)
+  bpar_meta(iVar)%ncFilID                             = ncid(modelTime)
   bpar_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1) = ncVarID
- enddo  
+ end do  
 
  ! **********************************************************************************************************
  ! ***** define statistics variables
@@ -151,9 +180,9 @@ contains
  ! define model forcing data
  do iVar = 1,maxVarForc
   ! put requested timing info into every file
-  if(forc_meta(iVar)%varName.eq.'time') then  
+  if(forc_meta(iVar)%varname.eq.'time') then  
    do iFreq = 1,nFreq
-    call def_variab(ncid(iFreq),(/Timestep_DimName/),forc_meta(iVar),noStat,noLyr,ncVarID,nf90_double,err,cmessage)
+    call def_variab(ncid(iFreq),(/Timestep_DimName/),forc_meta(iVar),noStat,ncVarID,nf90_double,err,cmessage)
     if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
     forc_meta(iVar)%ncFilID(iFreq)                  = ncid(iFreq)
     forc_meta(iVar)%ncVarID(iFreq,iLookStat%inst,1) = ncVarID
@@ -162,109 +191,159 @@ contains
   endif
   ! put all other forcing info into appropriate files 
   do iFreq = 1,nFreq
+   if (forc_meta(iVar)%outFreq.ne.freqs(iFreq)) cycle
    do iStat = 1,maxVarStat
-    if(.not.forc_meta(iVar)%statFlg(iFreq,iStat)) cycle
-    call def_variab(ncid(iFreq),(/hru_DimName,Timestep_DimName/),forc_meta(iVar),iStat,noLyr,ncVarID,nf90_double,err,cmessage)
+    if(.not.forc_meta(iVar)%statFlg(iStat)) cycle
+    call def_variab(ncid(iFreq),(/hru_DimName,Timestep_DimName/),forc_meta(iVar),iStat,ncVarID,nf90_double,err,cmessage)
     if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
     forc_meta(iVar)%ncFilID(iFreq)         = ncid(iFreq)
     forc_meta(iVar)%ncVarID(iFreq,iStat,1) = ncVarID
-   enddo ! looping through output statistics
-  enddo ! looping through output frequencies
- enddo ! looping through forcing variables
+   end do ! looping through output statistics
+  end do ! looping through output frequencies
+ end do ! looping through forcing variables
 
  ! define vertically integrted variables 
  do iVar = 1,maxVarIntg
-  do iFreq = 1,nFreq
-   do iStat = 1,maxVarStat 
-    if (.not.intg_meta(iVar)%statFlg(iFreq,iStat)) cycle
-    do iLyr = 1,nLayers
-     call def_variab(ncid(iFreq),(/hru_DimName,Layers_DimName,Timestep_DimName/),intg_meta(iVar),iStat,iLyr,ncVarID,nf90_double,err,cmessage)
+  do iLyr = 1,indx_data%var(iLookIndex%nSoil)+1
+   do iFreq = 1,nFreq
+    if (intg_meta(iVar,iLyr)%outFreq.ne.freqs(iFreq)) cycle
+    do iStat = 1,maxVarStat 
+     if (.not.intg_meta(iVar,iLyr)%statFlg(iStat)) cycle
+     call def_variab(ncid(iFreq),(/hru_DimName,Timestep_DimName/),intg_meta(iVar,iLyr),iStat,ncVarID,nf90_double,err,cmessage)
      if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-     intg_meta(iVar)%ncFilID(iFreq)                 = ncid(iFreq)
-     intg_meta(iVar)%ncVarID(iFreq,iStat,iLyr) = ncVarID
-    enddo ! looping through output statistics
-   enddo ! looping through output frequencies
-  enddo ! loop through integration layers 
- enddo ! loop through model variables
+     intg_meta(iVar)%ncFilID(iFreq)                        = ncid(iFreq)
+     intg_meta(iVar,iLyr)%ncVarID(iFreq,iStat,iLyr) = ncVarID
+    end do ! looping through output statistics
+   end do ! looping through output frequencies
+  end do ! loop through integration layers 
+ end do ! loop through model variables
 
  ! define local column model variables -- dimensions depend on the variable type
  do iVar = 1,maxVarBvar 
   do iFreq = 1,nFreq
+   if (bvar_meta(iVar)%outFreq.ne.freqs(iFreq)) cycle
    do iStat = 1,maxVarStat
-    if (.not.bvar_meta(iVar)%statFlg(iFreq,iStat)) cycle
+    if (.not.bvar_meta(iVar)%statFlg(iStat)) cycle
     select case(bvar_meta(iVar)%vartype)
      case(iLookVarType%scalarv)
-      call def_variab(ncid(iFreq),(/Timestep_DimName/),bvar_meta(iVar),iStat,noLyr,ncVarID,nf90_double,err,cmessage)  
+      call def_variab(ncid(iFreq),(/Timestep_DimName/),bvar_meta(iVar),iStat,ncVarID,nf90_double,err,cmessage)  
      case(iLookVarType%routing)
-      call def_variab(ncid(iFreq),(/Routing_DimName/),bvar_meta(iVar),iStat,noLyr,ncVarID,nf90_double,err,cmessage)  
+      call def_variab(ncid(iFreq),(/routing_DimName/),bvar_meta(iVar),iStat,ncVarID,nf90_double,err,cmessage)  
      case default; err=35; message=trim(message)//"varTypeNotFound"; return
     endselect
     if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
     bvar_meta(iVar)%ncFilID(iFreq)                = ncid(iFreq)
     bvar_meta(iVar)%ncVarID(iFreq,iStat,1) = ncVarID
-   enddo ! loop through statistics
-  enddo ! loop through frequencies
- enddo ! loop through model variables
+   end do ! loop through statistics
+  end do ! loop through frequencies
+ end do ! loop through model variables
 
  ! define local column model variables -- only scalars can have non-instantaneous statistics 
  do iVar = 1,maxVarMvar
   do iFreq = 1,nFreq
+   if (mvar_meta(iVar)%outFreq.ne.freqs(iFreq)) cycle
    do iStat = 1,maxVarStat
-    if (.not.mvar_meta(iVar)%statFlg(iFreq,iStat)) cycle
+    if (.not.mvar_meta(iVar)%statFlg(iStat)) cycle
     if (iLookVarType%scalarv.eq.mvar_meta(iVar)%vartype) then
-     call def_variab(ncid(iFreq),(/hru_DimName,Timestep_DimName/),mvar_meta(iVar),iStat,noLyr,ncVarID,nf90_double,err,cmessage)
+     call def_variab(ncid(iFreq),(/hru_DimName,Timestep_DimName/),mvar_meta(iVar),iStat,ncVarID,nf90_double,err,cmessage)
     endif
     if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
     mvar_meta(iVar)%ncFilID(iFreq)         = ncid(iFreq)
     mvar_meta(iVar)%ncVarID(iFreq,iStat,1) = ncVarID
-   enddo ! looping through output statistics
-  enddo ! loop through output frequencies
- enddo ! loop through model variables
+   end do ! looping through output statistics
+  end do ! loop through output frequencies
+ end do ! loop through model variables
 
  ! **********************************************************************************************************
  ! ***** define instantaneous variables
  ! **********************************************************************************************************
  ! define local column model variables -- dimensions depend on the variable type
  do iVar = 1,maxVarMvar
-  if (.not.mvar_meta(iVar)%statFlg(modelTime,iLookStat%inst)) cycle
-  select case(mvar_meta(iVar)%varType)
-   case(iLookVarType%wLength)
-    call def_variab(ncid(modelTime),(/hru_DimName,wLength_DimName,Timestep_DimName/),mvar_meta(iVar),iLookStat%inst,noLyr,ncVarID,nf90_double,err,cmessage) 
-   case(iLookVarType%midSnow)
-    call def_variab(ncid(modelTime),(/hru_DimName,midSnowAndTime_DimName/),mvar_meta(iVar),iLookStat%inst,noLyr,ncVarID,nf90_double,err,cmessage)
-   case(iLookVarType%midSoil)
-    call def_variab(ncid(modelTime),(/hru_DimName,midSoilAndTime_DimName/),mvar_meta(iVar),iLookStat%inst,noLyr,ncVarID,nf90_double,err,cmessage) 
-   case(iLookVarType%midToto)
-    call def_variab(ncid(modelTime),(/hru_DimName,midTotoAndTime_DimName/),mvar_meta(iVar),iLookStat%inst,noLyr,ncVarID,nf90_double,err,cmessage)  
-   case(iLookVarType%ifcSnow)
-    call def_variab(ncid(modelTime),(/hru_DimName,ifcSnowAndTime_DimName/),mvar_meta(iVar),iLookStat%inst,noLyr,ncVarID,nf90_double,err,cmessage)
-   case(iLookVarType%ifcSoil)
-    call def_variab(ncid(modelTime),(/hru_DimName,ifcSoilAndTime_DimName/),mvar_meta(iVar),iLookStat%inst,noLyr,ncVarID,nf90_double,err,cmessage) 
-   case(iLookVarType%ifcToto)
-    call def_variab(ncid(modelTime),(/hru_DimName,ifcTotoAndTime_DimName/),mvar_meta(iVar),iLookStat%inst,noLyr,ncVarID,nf90_double,err,cmessage)  
-  endselect
-  if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-  mvar_meta(iVar)%ncFilID(modelTime)                  = ncid(modelTime)
-  mvar_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1) = ncVarID
- enddo ! loop through model variables
+  do iFreq = 1,nFreq
+   if (mvar_meta(iVar)%outFreq.ne.freqs(iFreq)) cycle
+   if (.not.mvar_meta(iVar)%statFlg(iLookStat%inst)) cycle
+   select case(mvar_meta(iVar)%vartype)
+    case(iLookVarType%wLength)
+     call def_variab(ncid(iFreq),(/hru_DimName,wLength_DimName,Timestep_DimName/),mvar_meta(iVar),iStat,ncVarID,nf90_double,err,cmessage) 
+    case(iLookVarType%midSnow)
+     call def_variab(ncid(iFreq),(/hru_DimName,midSnowAndTime_DimName/),mvar_meta(iVar),iStat,ncVarID,nf90_double,err,cmessage)
+    case(iLookVarType%midSoil)
+     call def_variab(ncid(iFreq),(/hru_DimName,midSoilAndTime_DimName/),mvar_meta(iVar),iStat,ncVarID,nf90_double,err,cmessage) 
+    case(iLookVarType%midToto)
+     call def_variab(ncid(iFreq),(/hru_DimName,midTotoAndTime_DimName/),mvar_meta(iVar),iStat,ncVarID,nf90_double,err,cmessage)  
+    case(iLookVarType%ifcSnow)
+     call def_variab(ncid(iFreq),(/hru_DimName,ifcSnowAndTime_DimName/),mvar_meta(iVar),iStat,ncVarID,nf90_double,err,cmessage)
+    case(iLookVarType%ifcSoil)
+     call def_variab(ncid(iFreq),(/hru_DimName,ifcSoilAndTime_DimName/),mvar_meta(iVar),iStat,ncVarID,nf90_double,err,cmessage) 
+    case(iLookVarType%ifcToto)
+     call def_variab(ncid(iFreq),(/hru_DimName,ifcTotoAndTime_DimName/),mvar_meta(iVar),iStat,ncVarID,nf90_double,err,cmessage)  
+   endselect
+   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
+   mvar_meta(iVar)%ncFilID                 = ncid(iFreq)
+   mvar_meta(iVar)%ncVarID(iLookStat%inst) = ncVarID
+  end do ! loop through output frequencies
+ end do ! loop through model variables
  
  !  define local column model indices
  do iVar = 1,maxVarIndx
-  if (.not.indx_meta(iVar)%statFlg(modelTime,iLookSTAT%inst)) cycle
-  select case(indx_meta(iVar)%varType)
-   case(iLookVarType%scalarv)
-    call def_variab(ncid(modelTime),(/hru_DimName,Timestep_DimName/),indx_meta(iVar),noStat,noLyr,ncVarID,nf90_int,err,cmessage) 
-   case(iLookVarType%midToto)
-    call def_variab(ncid(modelTime),(/hru_DimName,midTotoAndTime_DimName/),indx_meta(iVar),noStat,noLyr,ncVarID,nf90_int,err,cmessage) 
-   case default; err=35; message=trim(message)//"varTypeNotFound"; return
-  endselect
-  if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-  indx_meta(iVar)%ncFilID(modelTime)                  = ncid(modelTime)
-  indx_meta(iVar)%ncVarID(modelTime,iLookSTAT%inst,1) = ncVarID
- enddo ! loop through model variables
+  do iFreq = 1,nFreq
+   if (indx_meta(iVar)%outFreq.ne.freqs(iFreq)) cycle
+   if (.not.indx_meta(iVar)%statFlg(iLookSTAT%inst)) cycle
+   select case(indx_meta(iVar)%vartype)
+    case(iLookVarType%scalarv)
+     call def_variab(ncid(iFreq),(/hru_DimName,Timestep_DimName/),indx_meta(iVar),iLookSTAT%inst,ncVarID,nf90_int,err,cmessage) 
+    case(iLookVarType%midToto)
+     call def_variab(ncid(iFreq),(/hru_DimName,midTotoAndTime_DimName/),indx_meta(iVar),iLookSTAT%inst,ncVarID,nf90_int,err,cmessage) 
+    case default; err=35; message=trim(message)//"varTypeNotFound"; return
+   endselect
+   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
+   indx_meta(iVar)%ncFilID                 = ncid(iFreq)
+   indx_meta(iVar)%ncVarID(iLookSTAT%inst) = ncVarID
+  end do ! loop through output frequencies
+ end do ! loop through model variables
 
  return
  end subroutine def_output
+
+ ! **********************************************************************************************************
+ ! private subroutine countFreq: count the number of output files (different output frequencies)
+ ! **********************************************************************************************************
+ subroutine countFrequencies(outFreq,nFreq,freqs,err,message)
+ USE data_struc,only:maxFreq
+ implicit none
+ 
+ ! dummies
+ integer(i4b),intent(in)                       :: outFreq        ! new output frequency
+ integer(i4b),intent(inout)                    :: nFreq        ! current number of output files
+ integer(i4b),dimension(maxFreq),intent(inout) :: freqs        ! storage of output frequqncies for comparisons
+ integer(i4b),intent(out)                      :: err          ! error code
+ character(*),intent(out)                      :: message      ! local error message
+
+ ! internals
+ logical(lgt)           :: found       ! lazy person's flag
+ integer(i4b),parameter :: modelTime=1 ! output at model timestep
+ integer(i4b)           :: iFreq       ! index loop
+
+ ! init error
+ err = 0
+ message = 'countFrequencies/'
+
+ if (outFreq.le.modelTime) return ! do nothing if variable is turned off or is requested at each timestep
+ found = .false.
+ do iFreq = 1,nFreq
+  if (outFreq.eq.freqs(iFreq)) then; found=.true.; exit; endif
+ enddo
+ if (.not.found) then
+  if (nFreq.lt.maxFreq) then
+   nFreq = nFreq+1;
+   freqs(nFreq) = outFreq
+  else
+   err=20; message=trim(message)//'too many output frequencies'; return
+  endif
+ endif
+ 
+ return
+ end subroutine countFrequencies
 
  ! **********************************************************************************************************
  ! private subroutine ini_create: initial create
@@ -307,7 +386,7 @@ contains
  err=0;message="f-iniCreate/"
 
  ! define number of soil layers
- nSoil = count(indx_data%var(iLookINDEX%layerType)%dat==ix_soil)  ! number of soil layers
+ nSoil = count(indx_data%var(iLookINDEX%layerType)%dat == ix_soil)  ! number of soil layers
 
  ! identify length of the variable vector
  maxStepsPerFile = min(numtim, nint(366._dp * secprday/data_step) )
@@ -367,10 +446,6 @@ contains
  err = nf90_def_dim(ncid, trim(ifcTotoAndTime_DimName), maxLength, dimId)
  message='iCreate[ifcToto]'; call netcdf_err(err,message); if (err/=0) return
 
- ! create dimension for integrated layers
- err = nf90_def_dim(ncid, trim(Layers_DimName), nSoil+1, dimId)
- message='iCreate[layered]'; call netcdf_err(err,message); if (err/=0) return
-
  ! end definition phase
  err = nf90_enddef(ncid); call netcdf_err(err,message); if (err/=0) return
  end subroutine ini_create
@@ -408,18 +483,16 @@ contains
  ! **********************************************************************************************************
  ! private subroutine def_variab: define variables
  ! **********************************************************************************************************
- subroutine def_variab(ncid,dimNames,meta,iStat,iLyr,ncVarID,ivtype,err,message)
+ subroutine def_variab(ncid,dimNames,meta,iStat,ncVarID,ivtype,err,message)
  USE get_ixname_module,only:get_StatName   ! for ncdf file variable name
  USE data_struc,only:var_info              ! class def for meta data
  implicit none
 
  ! dummies
  integer(i4b),intent(in)       :: ncid        ! file id
- character(*),intent(in)       :: dimNames(:) ! dimension namess
- class(var_info),intent(in)    :: meta        ! meta data structure
+ character(*), intent(in)      :: dimNames(:) ! dimension namess
+ class(var_info)               :: meta        ! meta data structure
  integer(i4b),intent(in)       :: iStat       ! output statistic type
- integer(i4b),intent(in)       :: iLyr        ! output integrated layer
- integer(i4b),intent(out)      :: ncVarId     ! variable ID
  integer(i4b),intent(in)       :: ivtype      ! variable type
  integer(i4b),intent(out)      :: err         ! error code
  character(*),intent(out)      :: message     ! error message
@@ -427,8 +500,8 @@ contains
  ! locals
  integer(i4b)                  :: id          ! loop through dimensions
  integer(i4b)                  :: dimIDs(size(dimNames))
- character(256)                :: catName     ! variable name for netcdf file (includes statistic and layer)
- character(10)                 :: lyrStr      ! string for layer name
+ integer(i4b)                  :: ncVarId     ! variable ID
+ character(256)                :: catName     ! variable name for netcdf file (includes statistic name)
 
  ! initialize error control
  err=0;message="defVariab/"//trim(meta%varname)//"/"
@@ -440,19 +513,11 @@ contains
  do id = 1,size(dimNames)
   err=nf90_inq_dimid(ncid,trim(dimNames(id)),dimIDs(id))
   call netcdf_err(err,message); if (err/=0) return
- enddo
+ end do
 
  ! define variable
  catName = trim(meta%varName)
- if (iStat.gt.0) catName = trim(catName)//'_'//trim(get_statName(iStat))
- if (iLyr.eq.1) then
-  lyrStr='snow'
- elseif (iLyr.gt.1) then
-  write(lyrStr,'(i10)') iLyr-1
-  lyrStr = adjustl(lyrStr)
-  lyrStr = 'soil'//trim(lyrStr)
- endif
- if (iLyr.gt.0) catName = trim(catName)//'_'//trim(lyrStr)
+ if (iStat.gt.0)  catName = trim(meta%varName)//'_'//trim(get_statName(iStat))
  err = nf90_def_var(ncid,trim(catName),ivtype,dimIds,ncVarID)
  call netcdf_err(err,message); if (err/=0) return
 
@@ -475,11 +540,10 @@ contains
  ! private subroutine put_attrib: put global attributes as character string
  ! **********************************************************************************************************
  subroutine netcdf_close(err,message)
- USE multiconst,only:integerMissing                   ! missing value flag
- USE data_struc,only:nFreq                            ! output frequencies
- USE data_struc,only:forc_meta,attr_meta,type_meta    ! metadata structures
- USE data_struc,only:mpar_meta,mvar_meta,indx_meta    ! metadata structures
- USE data_struc,only:bpar_meta,bvar_meta,intg_meta    ! metadata structures
+ USE multiconst,only:integerMissing         ! missing value flag
+ USE data_struc,only:forc_meta,attr_meta,type_meta ! metadata structures
+ USE data_struc,only:mpar_meta,mvar_meta,indx_meta ! metadata structures
+ USE data_struc,only:bpar_meta,bvar_meta,intg_meta ! metadata structures
  USE var_lookup,only:maxVarForc,maxVarAttr,maxVarType ! variable counts
  USE var_lookup,only:maxVarMpar,maxVarMvar,maxVarIndx ! variable counts
  USE var_lookup,only:maxVarBpar,maxVarBvar,maxVarIntg ! variable counts
@@ -491,112 +555,74 @@ contains
 
  ! internals
  integer(i4b) :: iVar
- integer(i4b) :: iFreq
 
  ! initialize error control
  err=0; message = 'netcdf_close/'
 
  ! loop through all variables to close all files
  do iVar = 1,maxVarForc ! forcings
-  do iFreq = 1,nFreq
-   if (forc_meta(iVar)%ncFilID(iFreq).ne.integerMissing) then
-    err = nf90_close(forc_meta(iVar)%ncFilID(iFreq))
-    if ((err.ne.0).and.(err.ne.-33)) then; call netcdf_err(err,message); message='netcdf_close'//trim(message); return; endif
-    forc_meta(iVar)%ncFilID = integerMissing
-    forc_meta(iVar)%ncVarID = integerMissing
-   endif ! file exists
-  enddo ! iFreq
+  err = nf90_close(forc_meta(iVar)%ncFilID)
+  call netcdf_err(err,message); if (err/=0) message='netcdf_close'//trim(message)
+  forc_meta(iVar)%ncFilID = integerMissing
+  forc_meta(iVar)%ncVarID = integerMissing
  enddo ! iVar
 
  do iVar = 1,maxVarAttr ! attributes
-  do iFreq = 1,nFreq
-   if (attr_meta(iVar)%ncFilID(iFreq).ne.integerMissing) then
-    err = nf90_close(attr_meta(iVar)%ncFilID(iFreq))
-    if ((err.ne.0).and.(err.ne.-33)) then; call netcdf_err(err,message); message='netcdf_close'//trim(message); return; endif
-    attr_meta(iVar)%ncFilID = integerMissing
-    attr_meta(iVar)%ncVarID = integerMissing
-   endif ! file exists
-  enddo ! iFreq
+  err = nf90_close(attr_meta(iVar)%ncFilID)
+  call netcdf_err(err,message); if (err/=0) message='netcdf_close'//trim(message)
+  attr_meta(iVar)%ncFilID = integerMissing
+  attr_meta(iVar)%ncVarID = integerMissing
  enddo ! iVar
 
  do iVar = 1,maxVarType ! types
-  do iFreq = 1,nFreq
-   if (type_meta(iVar)%ncFilID(iFreq).ne.integerMissing) then
-    err = nf90_close(type_meta(iVar)%ncFilID(iFreq))
-    if ((err.ne.0).and.(err.ne.-33)) then; call netcdf_err(err,message); message='netcdf_close'//trim(message); return; endif
-    type_meta(iVar)%ncFilID = integerMissing
-    type_meta(iVar)%ncVarID = integerMissing
-   endif ! file exists
-  enddo ! iFreq
+  err = nf90_close(type_meta(iVar)%ncFilID)
+  call netcdf_err(err,message); if (err/=0) message='netcdf_close'//trim(message)
+  type_meta(iVar)%ncFilID = integerMissing
+  type_meta(iVar)%ncVarID = integerMissing
  enddo ! iVar
 
  do iVar = 1,maxVarMpar ! model parameters
-  do iFreq = 1,nFreq
-   if (mpar_meta(iVar)%ncFilID(iFreq).ne.integerMissing) then
-    err = nf90_close(mpar_meta(iVar)%ncFilID(iFreq))
-    if ((err.ne.0).and.(err.ne.-33)) then; call netcdf_err(err,message); message='netcdf_close'//trim(message); return; endif
-    mpar_meta(iVar)%ncFilID = integerMissing
-    mpar_meta(iVar)%ncVarID = integerMissing
-   endif ! file exists
-  enddo ! iFreq
+  err = nf90_close(mpar_meta(iVar)%ncFilID)
+  call netcdf_err(err,message); if (err/=0) message='netcdf_close'//trim(message)
+  mpar_meta(iVar)%ncFilID = integerMissing
+  mpar_meta(iVar)%ncVarID = integerMissing
  enddo ! iVar
 
  do iVar = 1,maxVarMvar ! model variables
-  do iFreq = 1,nFreq
-   if (mvar_meta(iVar)%ncFilID(iFreq).ne.integerMissing) then
-    err = nf90_close(mvar_meta(iVar)%ncFilID(iFreq))
-    if ((err.ne.0).and.(err.ne.-33)) then; call netcdf_err(err,message); message='netcdf_close'//trim(message); return; endif
-    mvar_meta(iVar)%ncFilID = integerMissing
-    mvar_meta(iVar)%ncVarID = integerMissing
-   endif ! file exists
-  enddo ! iFreq
+  err = nf90_close(mvar_meta(iVar)%ncFilID)
+  call netcdf_err(err,message); if (err/=0) message='netcdf_close'//trim(message)
+  mvar_meta(iVar)%ncFilID = integerMissing
+  mvar_meta(iVar)%ncVarID = integerMissing
  enddo ! iVar
 
  do iVar = 1,maxVarBpar ! basin parameters
-  do iFreq = 1,nFreq
-   if (bpar_meta(iVar)%ncFilID(iFreq).ne.integerMissing) then
-    err = nf90_close(bpar_meta(iVar)%ncFilID(iFreq))
-    if ((err.ne.0).and.(err.ne.-33)) then; call netcdf_err(err,message); message='netcdf_close'//trim(message); return; endif
-    bpar_meta(iVar)%ncFilID = integerMissing
-    bpar_meta(iVar)%ncVarID = integerMissing
-   endif ! file exists
-  enddo ! iFreq
+  err = nf90_close(bpar_meta(iVar)%ncFilID)
+  call netcdf_err(err,message); if (err/=0) message='netcdf_close'//trim(message)
+  bpar_meta(iVar)%ncFilID = integerMissing
+  bpar_meta(iVar)%ncVarID = integerMissing
  enddo ! iVar
 
  do iVar = 1,maxVarBvar ! basin variables
-  do iFreq = 1,nFreq
-   if (bvar_meta(iVar)%ncFilID(iFreq).ne.integerMissing) then
-    err = nf90_close(bvar_meta(iVar)%ncFilID(iFreq))
-    if ((err.ne.0).and.(err.ne.-33)) then; call netcdf_err(err,message); message='netcdf_close'//trim(message); return; endif
-    bvar_meta(iVar)%ncFilID = integerMissing
-    bvar_meta(iVar)%ncVarID = integerMissing
-   endif ! file exists
-  enddo ! iFreq
+  err = nf90_close(bvar_meta(iVar)%ncFilID)
+  call netcdf_err(err,message); if (err/=0) message='netcdf_close'//trim(message)
+  bvar_meta(iVar)%ncFilID = integerMissing
+  bvar_meta(iVar)%ncVarID = integerMissing
  enddo ! iVar
 
  do iVar = 1,maxVarIntg ! integrated variables
-  do iFreq = 1,nFreq
-   if (intg_meta(iVar)%ncFilID(iFreq).ne.integerMissing) then
-    err = nf90_close(intg_meta(iVar)%ncFilID(iFreq))
-    if ((err.ne.0).and.(err.ne.-33)) then; call netcdf_err(err,message); message='netcdf_close'//trim(message); return; endif
-    intg_meta(iVar)%ncFilID = integerMissing
-    intg_meta(iVar)%ncVarID = integerMissing
-   endif ! file exists
-  enddo ! iFreq
+  err = nf90_close(intg_meta(iVar)%ncFilID)
+  call netcdf_err(err,message); if (err/=0) message='netcdf_close'//trim(message)
+  intg_meta(iVar)%ncFilID = integerMissing
+  intg_meta(iVar)%ncVarID = integerMissing
  enddo ! iVar
 
  do iVar = 1,maxVarIndx ! index variables
-  do iFreq = 1,nFreq
-   if (indx_meta(iVar)%ncFilID(iFreq).ne.integerMissing) then
-    err = nf90_close(indx_meta(iVar)%ncFilID(iFreq))
-    if ((err.ne.0).and.(err.ne.-33)) then; call netcdf_err(err,message); message='netcdf_close'//trim(message); return; endif
-    indx_meta(iVar)%ncFilID = integerMissing
-    indx_meta(iVar)%ncVarID = integerMissing
-   endif ! file exists
-  enddo ! iFreq
+  err = nf90_close(indx_meta(iVar)%ncFilID)
+  call netcdf_err(err,message); if (err/=0) message='netcdf_close'//trim(message)
+  indx_meta(iVar)%ncFilID = integerMissing
+  indx_meta(iVar)%ncVarID = integerMissing
  enddo ! iVar
 
- if (err.eq.-33) err=0
  return
  end subroutine netcdf_close
 

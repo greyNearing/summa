@@ -66,12 +66,12 @@ USE qTimeDelay_module,only:qOverland                        ! module to route wa
 USE summaFileManager,only:SETNGS_PATH                       ! define path to settings files (e.g., Noah vegetation tables)
 USE summaFileManager,only:OUTPUT_PATH,OUTPUT_PREFIX         ! define output file
 USE summaFileManager,only:LOCALPARAM_INFO,BASINPARAM_INFO   ! files defining the default values and constraints for model parameters
-USE data_struc,only:ncid                                    ! flag to initialize a new output file
+USE data_struc,only:nFreq,outFreq                           ! output frequencies
 USE data_struc,only:doJacobian                              ! flag to compute the Jacobian
 USE data_struc,only:localParFallback                        ! local column default parameters
 USE data_struc,only:basinParFallback                        ! basin-average default parameters
 USE data_struc,only:mpar_meta,bpar_meta                     ! metadata for local column and basin-average model parameters
-USE data_struc,only:outputFrequency                         ! output frequency
+USE data_struc,only:outFreq,maxFreq                         ! output frequency
 USE data_struc,only:numtim                                  ! number of time steps
 USE data_struc,only:time_data,time_hru,refTime              ! time and reference time
 USE data_struc,only:forc_data,forc_hru                      ! model forcing data
@@ -111,7 +111,6 @@ USE mDecisions_module,only:&                                ! look-up values for
 USE mDecisions_module,only:&                                ! look-up values for the choice of method for the spatial representation of groundwater
  localColumn, & ! separate groundwater representation in each local soil column
  singleBasin    ! single groundwater store over the entire basin
-USE multiconst,only:integerMissing                          ! missing value flag
 implicit none
 
 ! *****************************************************************************
@@ -122,7 +121,7 @@ integer(i4b)              :: iHRU,jHRU,kHRU                 ! index of the hydro
 integer(i4b)              :: nHRU                           ! number of hydrologic response units
 integer(i4b)              :: iStep=0                        ! index of model time step
 integer(i4b)              :: jStep=0                        ! index of water year
-integer(i4b)              :: kStep=0       !GREY GSN  - do we need this?               ! index of model output
+integer(i4b),dimension(maxFreq) :: kStep=0                        ! index of model output
 ! define the re-start file
 logical(lgt)              :: printRestart                   ! flag to print a re-start file
 integer(i4b),parameter    :: ixRestart_iy=1000              ! named variable to print a re-start file once per year
@@ -162,6 +161,10 @@ real(dp),parameter        :: doubleMissing=-9999._dp        ! missing value
 ! error control
 integer(i4b)              :: err=0                          ! error code
 character(len=1024)       :: message=''                     ! error message
+! output control  
+logical(lgt)              :: ncid                           ! to re-init output files
+integer(i4b)              :: iFreq                          ! to loop through output frequencies
+logical(lgt)              :: allocStats                     ! flag to tell us whether stats vectors need to be allocated
 
 ! *****************************************************************************
 ! (1) inital priming -- get command line arguments, identify files, etc.
@@ -183,10 +186,11 @@ endif
 ! set directories and files -- summaFileManager used as command-line argument
 call summa_SetDirsUndPhiles(summaFileManagerFile,err,message); call handle_err(err,message)
 ! initialize the Jacobian flag
-doJacobian=.false.
+doJacobian = .false.
 ! initialize the output flag
-ncid=integerMissing
-
+ncid = .false.
+! initialize stats flag
+allocStats = .false.
 
 ! *****************************************************************************
 ! (2) read model metadata
@@ -213,8 +217,6 @@ call alloc_bvar(err,message); call handle_err(err,message)
 call alloc_forc(nHRU,err,message); call handle_err(err,message)
 call alloc_time(nHRU,err,message); call handle_err(err,message)
 call alloc_stim(refTime,err,message); call handle_err(err,message)
-! allocate space for output statistics
-call alloc_stats(nHRU,err,message); call handle_err(err,message)
 ! allocate space for the time step (recycled for each HRU for subsequent calls to coupled_em)
 allocate(dt_init(nHRU),stat=err); call handle_err(err,'problem allocating space for dt_init')
 
@@ -287,11 +289,20 @@ do iHRU=1,nHRU
  ! NOTE: at this stage the same initial conditions are used for all HRUs -- need to modify
  call read_icond(err,message); call handle_err(err,message)
  print*, 'aquifer storage = ', mvar_data%var(iLookMVAR%scalarAquiferStorage)%dat(1)
+ 
+ ! allocate space for output statistics
+ if (.not.allocStats) then
+  call alloc_stats(nHRU,err,message)
+  call handle_err(err,message)
+  allocStats=.true.
+ endif
+
  ! assign pointers to model layers
  ! NOTE: layer structure is different for each HRU
  nSnow   => indx_data%var(iLookINDEX%nSnow)%dat(1)
  nSoil   => indx_data%var(iLookINDEX%nSoil)%dat(1)
  nLayers => indx_data%var(iLookINDEX%nLayers)%dat(1)
+
  ! re-calculate height of each layer
  call calcHeight(&
                  ! input/output: data structures
@@ -300,30 +311,42 @@ do iHRU=1,nHRU
                  ! output: error control
                  err,message); call handle_err(err,message)
  ! compute derived model variables that are pretty much constant over each HRU
+
  call E2T_lookup(err,message); call handle_err(err,message) ! calculate a look-up table for the temperature-enthalpy conversion
+
  call rootDensty(err,message); call handle_err(err,message) ! calculate vertical distribution of root density
+
  call satHydCond(err,message); call handle_err(err,message) ! calculate saturated hydraulic conductivity in each soil layer
+
  call v_shortcut(err,message); call handle_err(err,message) ! calculate "short-cut" variables such as volumetric heat capacity
+
  ! overwrite the vegetation height
  HVT(type_data%var(iLookTYPE%vegTypeIndex)) = mpar_data%var(iLookPARAM%heightCanopyTop)
  HVB(type_data%var(iLookTYPE%vegTypeIndex)) = mpar_data%var(iLookPARAM%heightCanopyBottom)
+
  ! overwrite the tables for LAI and SAI
  if(model_decisions(iLookDECISIONS%LAI_method)%iDecision == specified)then
   SAIM(type_data%var(iLookTYPE%vegTypeIndex),:) = mpar_data%var(iLookPARAM%winterSAI)
   LAIM(type_data%var(iLookTYPE%vegTypeIndex),:) = mpar_data%var(iLookPARAM%summerLAI)*greenVegFrac_monthly
  endif
+
  ! initialize canopy drip
  ! NOTE: canopy drip from the previous time step is used to compute throughfall for the current time step
  mvar_hru(iHRU)%var(iLookMVAR%scalarCanopyLiqDrainage)%dat(1) = 0._dp  ! not used
+
  ! define the filename for model spinup
- write(fileout,'(a,i0,a,i0,a)') trim(OUTPUT_PATH)//trim(OUTPUT_PREFIX)//'_spinup'//trim(output_fileSuffix)//'.nc'
+ write(fileout,'(a,i0,a,i0,a)') trim(OUTPUT_PATH)//trim(OUTPUT_PREFIX)//'_spinup'//trim(output_fileSuffix)
+
  ! define the file if the first parameter set
  if(iHRU==1) then
   call def_output(nHRU,fileout,err,message); call handle_err(err,message)
+  ncid = .true.
  endif
+
  ! write local model attributes and parameters to the model output file
  call writeAttrb(iHRU,err,message); call handle_err(err,message)
  call writeParam(iHRU,err,message); call handle_err(err,message)
+
  ! initialize indices
  indx_data%var(iLookINDEX%midSnowStartIndex)%dat(1) = 1
  indx_data%var(iLookINDEX%midSoilStartIndex)%dat(1) = 1
@@ -405,7 +428,7 @@ do istep=1,numtim
     time_data%var(iLookTIME%imin)==0)then       ! minute = 0
 
   ! close old output file
-  if (ncid.ne.integerMissing) then
+  if (ncid) then
    call netcdf_close(err,message)
    call handle_err(err,message)
   endif
@@ -413,7 +436,7 @@ do istep=1,numtim
   ! define the filename
   write(fileout,'(a,i0,a,i0,a)') trim(OUTPUT_PATH)//trim(OUTPUT_PREFIX)//'_',&
                                  time_data%var(iLookTIME%iyyy),'-',time_data%var(iLookTIME%iyyy)+1,&
-                                 trim(output_fileSuffix)//'.nc'
+                                 trim(output_fileSuffix)
   ! define the file
   call def_output(nHRU,fileout,err,message); call handle_err(err,message)
   ! write parameters for each HRU, and re-set indices
@@ -580,14 +603,13 @@ do istep=1,numtim
   ! compile output statistics before writing to netcdf file
   call compile_stats(iHRU,jstep,err,message); call handle_err(err,message)
 
-  if (mod(jstep,outputFrequency).eq.0) then
-   ! write the forcing data to the model output file
-   call writeForce(iHRU,kstep,err,message); call handle_err(err,message)
-   ! write the model output to the NetCDF file
-   call writeModel(iHRU,kstep,err,message); call handle_err(err,message)
-   ! write the vertically integrated output to the NetCDF file
-   call writeInteg(iHRU,kstep,err,message); call handle_err(err,message)
-  endif
+  do iFreq = 1,nFreq
+   if (mod(jstep,outFreq(iFreq)).eq.0) then
+    call writeForce(iHRU,iFreq,kstep(iFreq),err,message); call handle_err(err,message)
+    call writeModel(iHRU,iFreq,kstep(iFreq),err,message); call handle_err(err,message)
+    call writeInteg(iHRU,iFreq,kstep(iFreq),err,message); call handle_err(err,message)
+   endif
+  enddo
 
   ! increment the model indices
   midSnowStartIndex = midSnowStartIndex + nSnow
@@ -625,11 +647,12 @@ do istep=1,numtim
  ! compile basin-average statistics
  call compile_basin_stats(istep,err,message); call handle_err(err,message)
 
- if (mod(jstep,outputFrequency).eq.0) then
-  ! write basin-average variables
-  call writeBasin(kstep,err,message); call handle_err(err,message)
-  kstep = kstep + 1
- endif
+ do iFreq = 1,nFreq
+  if (mod(jstep,outFreq(iFreq)).eq.0) then
+   call writeBasin(iFreq,kstep(iFreq),err,message); call handle_err(err,message)
+   kstep(iFreq) = kstep(iFreq) + 1
+  endif
+ enddo
 
  ! increment the time index
  jstep = jstep+1
