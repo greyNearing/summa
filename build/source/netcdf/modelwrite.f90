@@ -281,8 +281,8 @@ contains
    enddo ! iStat
   else
    if (.not.mvar_meta(iVar)%statFlg(iFreq,iLookStat%inst)) cycle
-   ncid  = mvar_meta(ivar)%ncFilID(modelTime)
-   varid = mvar_meta(ivar)%ncVarID(modelTime,iLookStat%inst)
+   ncid  = mvar_meta(iVar)%ncFilID(modelTime)
+   varid = mvar_meta(iVar)%ncVarID(modelTime,iLookStat%inst)
    select case(mvar_meta(iVar)%varType)
     case(iLookVarType%wLength)
      err = nf90_put_var(ncid,varid,mvar_data%var(iVar)%dat,start=(/iHRU,1,iStep/),count=(/1,maxSpectral,1/))       

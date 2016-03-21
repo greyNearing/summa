@@ -276,9 +276,11 @@ contains
 
   ! model variables
   do iVar = 1,maxVarMvar
-   tdata = mvar_data%var(iVar)%dat(1)
-   call calc_stats(mvar_meta(iVar),mvar_stat(iHRU,iFreq)%var(iVar),tdata,iFreq,iStep,err,cmessage)  
-   if(err/=0)then; message=trim(message)//trim(cmessage)//"Mvar";return; endif  
+   if (mvar_meta(iVar)%varType.eq.iLookVarType%scalarv) then
+    tdata = mvar_data%var(iVar)%dat(1)
+    call calc_stats(mvar_meta(iVar),mvar_stat(iHRU,iFreq)%var(iVar),tdata,iFreq,iStep,err,cmessage)  
+    if(err/=0)then; message=trim(message)//trim(cmessage)//"Mvar";return; endif  
+   endif
   enddo
 
   ! forcing variables
@@ -407,7 +409,7 @@ contains
  ! ---------------------------------------------
  ! reset statistics at new frequenncy period 
  ! ---------------------------------------------
- if (mod(iStep,outFreq(iFreq)).eq.1) then
+ if ((mod(iStep,outFreq(iFreq)).eq.1).or.(outFreq(iFreq).eq.1)) then
   do iStat = 1,maxVarStat                          ! loop through output statistics
    if (.not.meta%statFlg(iFreq,iStat)) cycle       ! don't bother if output flag is off
    if (meta%varType.ne.iLookVarType%scalarv) cycle ! only calculate stats for scalars 
@@ -466,7 +468,7 @@ contains
      stat%dat(iStat) = stat%dat(iStat)/outFreq(iFreq) ! normalize sum into mean
     case (iLookStat%vari)                          ! variance over period
      stat%dat(maxVarStat+1) = stat%dat(maxVarStat+1)/outFreq(iFreq) ! E[X] term
-     stat%dat(iStat) = stat%dat(iStat)/outFreq(iFreq) + stat%dat(maxVarStat+1) ! full variance
+     stat%dat(iStat) = stat%dat(iStat)/outFreq(iFreq) - stat%dat(maxVarStat+1)**2 ! full variance
    endselect
   enddo ! iStat 
  endif
