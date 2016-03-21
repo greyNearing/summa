@@ -26,7 +26,6 @@ MODULE data_struc
  implicit none
  integer(i4b), public, parameter :: maxVarStat = 7
  integer(i4b), public, parameter :: maxFreq    = 10
- integer(i4b), public, parameter :: maxIntgLyr = 1000
  integer(i4b) :: maxVarID
  private
 
@@ -80,7 +79,7 @@ MODULE data_struc
   character(len=64)                      :: varUnit='notPopulatedYet'! variable units
   integer(i4b)                           :: varType=0                ! variable type 
   integer(i4b),dimension(maxFreq)        :: ncFilID=integerMissing   ! netcdf file id 
-  integer(i4b),dimension(maxFreq,maxVarStat,maxIntgLyr) &
+  integer(i4b),dimension(maxFreq,maxVarStat) &
                                          :: ncVarID=integerMissing   ! netcdf variable id 
   logical(lgt),dimension(maxFreq,maxVarStat) &
                                          :: statFlg=.false.          ! statistic flag (on/off) 

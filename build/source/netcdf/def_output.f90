@@ -114,8 +114,8 @@ contains
   if (.not.attr_meta(iVar)%statFlg(modelTime,iLookSTAT%inst)) cycle
   call def_variab(ncid(modelTime),(/hru_DimName/),attr_meta(iVar),noStat,noLyr,ncVarID,nf90_double,err,cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-  attr_meta(iVar)%ncFilID(modelTime)                  = ncid(modelTime)
-  attr_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1) = ncVarID
+  attr_meta(iVar)%ncFilID(modelTime)                = ncid(modelTime)
+  attr_meta(iVar)%ncVarID(modelTime,iLookStat%inst) = ncVarID
  enddo  
 
  ! define local classification of veg, soil, etc.
@@ -123,8 +123,8 @@ contains
   if (.not.type_meta(iVar)%statFlg(modelTime,iLookSTAT%inst)) cycle
   call def_variab(ncid(1),(/hru_DimName/),type_meta(iVar),noStat,noLyr,ncVarID,nf90_int,err,cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-  type_meta(iVar)%ncFilID(modelTime)                  = ncid(modelTime)
-  type_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1) = ncVarID
+  type_meta(iVar)%ncFilID(modelTime)                = ncid(modelTime)
+  type_meta(iVar)%ncVarID(modelTime,iLookStat%inst) = ncVarID
  enddo  
 
  ! define local column model parameters
@@ -132,8 +132,8 @@ contains
   if (.not.mpar_meta(iVar)%statFlg(modelTime,iLookSTAT%inst)) cycle
   call def_variab(ncid(1),(/hru_DimName/),mpar_meta(iVar),noStat,noLyr,ncVarID,nf90_double,err,cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-  mpar_meta(iVar)%ncFilID(modelTime)                  = ncid(modelTime)
-  mpar_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1) = ncVarID
+  mpar_meta(iVar)%ncFilID(modelTime)                = ncid(modelTime)
+  mpar_meta(iVar)%ncVarID(modelTime,iLookStat%inst) = ncVarID
  enddo  
 
  ! define basin-average model parameters
@@ -141,8 +141,8 @@ contains
   if (.not.bpar_meta(iVar)%statFlg(modelTime,iLookSTAT%inst)) cycle
   call def_variab(ncid(1),(/scalar_DimName/),bpar_meta(iVar),noStat,noLyr,ncVarID,nf90_double,err,cmessage)
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-  bpar_meta(iVar)%ncFilID(modelTime)                  = ncid(modelTime)
-  bpar_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1) = ncVarID
+  bpar_meta(iVar)%ncFilID(modelTime)                = ncid(modelTime)
+  bpar_meta(iVar)%ncVarID(modelTime,iLookStat%inst) = ncVarID
  enddo  
 
  ! **********************************************************************************************************
@@ -155,8 +155,8 @@ contains
    do iFreq = 1,nFreq
     call def_variab(ncid(iFreq),(/Timestep_DimName/),forc_meta(iVar),noStat,noLyr,ncVarID,nf90_double,err,cmessage)
     if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-    forc_meta(iVar)%ncFilID(iFreq)                  = ncid(iFreq)
-    forc_meta(iVar)%ncVarID(iFreq,iLookStat%inst,1) = ncVarID
+    forc_meta(iVar)%ncFilID(iFreq)                = ncid(iFreq)
+    forc_meta(iVar)%ncVarID(iFreq,iLookStat%inst) = ncVarID
    enddo
    cycle
   endif
@@ -166,8 +166,8 @@ contains
     if(.not.forc_meta(iVar)%statFlg(iFreq,iStat)) cycle
     call def_variab(ncid(iFreq),(/hru_DimName,Timestep_DimName/),forc_meta(iVar),iStat,noLyr,ncVarID,nf90_double,err,cmessage)
     if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-    forc_meta(iVar)%ncFilID(iFreq)         = ncid(iFreq)
-    forc_meta(iVar)%ncVarID(iFreq,iStat,1) = ncVarID
+    forc_meta(iVar)%ncFilID(iFreq)       = ncid(iFreq)
+    forc_meta(iVar)%ncVarID(iFreq,iStat) = ncVarID
    enddo ! looping through output statistics
   enddo ! looping through output frequencies
  enddo ! looping through forcing variables
@@ -179,8 +179,8 @@ contains
     if (.not.intg_meta(iVar)%statFlg(iFreq,iStat)) cycle
     call def_variab(ncid(iFreq),(/hru_DimName,Layers_DimName,Timestep_DimName/),intg_meta(iVar),iStat,noLyr,ncVarID,nf90_double,err,cmessage)
     if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-    intg_meta(iVar)%ncFilID(iFreq)         = ncid(iFreq)
-    intg_meta(iVar)%ncVarID(iFreq,iStat,1) = ncVarID
+    intg_meta(iVar)%ncFilID(iFreq)       = ncid(iFreq)
+    intg_meta(iVar)%ncVarID(iFreq,iStat) = ncVarID
    enddo ! looping through output frequencies
   enddo ! loop through integration layers 
  enddo ! loop through model variables
@@ -198,8 +198,8 @@ contains
      case default; err=35; message=trim(message)//"varTypeNotFound"; return
     endselect
     if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-    bvar_meta(iVar)%ncFilID(iFreq)                = ncid(iFreq)
-    bvar_meta(iVar)%ncVarID(iFreq,iStat,1) = ncVarID
+    bvar_meta(iVar)%ncFilID(iFreq)       = ncid(iFreq)
+    bvar_meta(iVar)%ncVarID(iFreq,iStat) = ncVarID
    enddo ! loop through statistics
   enddo ! loop through frequencies
  enddo ! loop through model variables
@@ -213,8 +213,8 @@ contains
      call def_variab(ncid(iFreq),(/hru_DimName,Timestep_DimName/),mvar_meta(iVar),iStat,noLyr,ncVarID,nf90_double,err,cmessage)
     endif
     if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-    mvar_meta(iVar)%ncFilID(iFreq)         = ncid(iFreq)
-    mvar_meta(iVar)%ncVarID(iFreq,iStat,1) = ncVarID
+    mvar_meta(iVar)%ncFilID(iFreq)       = ncid(iFreq)
+    mvar_meta(iVar)%ncVarID(iFreq,iStat) = ncVarID
    enddo ! looping through output statistics
   enddo ! loop through output frequencies
  enddo ! loop through model variables
@@ -242,8 +242,8 @@ contains
     call def_variab(ncid(modelTime),(/hru_DimName,ifcTotoAndTime_DimName/),mvar_meta(iVar),iLookStat%inst,noLyr,ncVarID,nf90_double,err,cmessage)  
   endselect
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-  mvar_meta(iVar)%ncFilID(modelTime)                  = ncid(modelTime)
-  mvar_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1) = ncVarID
+  mvar_meta(iVar)%ncFilID(modelTime)                = ncid(modelTime)
+  mvar_meta(iVar)%ncVarID(modelTime,iLookStat%inst) = ncVarID
  enddo ! loop through model variables
  
  !  define local column model indices
@@ -257,8 +257,8 @@ contains
    case default; err=35; message=trim(message)//"varTypeNotFound"; return
   endselect
   if(err/=0)then; message=trim(message)//trim(cmessage); return; endif
-  indx_meta(iVar)%ncFilID(modelTime)                  = ncid(modelTime)
-  indx_meta(iVar)%ncVarID(modelTime,iLookSTAT%inst,1) = ncVarID
+  indx_meta(iVar)%ncFilID(modelTime)                = ncid(modelTime)
+  indx_meta(iVar)%ncVarID(modelTime,iLookSTAT%inst) = ncVarID
  enddo ! loop through model variables
 
  return

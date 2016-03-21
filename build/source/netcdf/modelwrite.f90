@@ -63,7 +63,7 @@ contains
   message=trim(message)//trim(attr_meta(iVar)%varName)//'/'
   ! write data
   ncid  = attr_meta(iVar)%ncFilID(modelTime)
-  varid = attr_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1)
+  varid = attr_meta(iVar)%ncVarID(modelTime,iLookStat%inst)
   err = nf90_put_var(ncid,varid,(/attr_data%var(iVar)/),start=(/iHRU/),count=(/1/))
   call netcdf_err(err,message); if (err/=0) return
   ! re-initialize message
@@ -78,7 +78,7 @@ contains
   message=trim(message)//trim(type_meta(iVar)%varName)//'/'
   ! write data
   ncid  = type_meta(iVar)%ncFilID(modelTime)
-  varid = type_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1)
+  varid = type_meta(iVar)%ncVarID(modelTime,iLookStat%inst)
   err = nf90_put_var(ncid,varid,(/type_data%var(iVar)/),start=(/iHRU/),count=(/1/))
   call netcdf_err(err,message); if (err/=0) return
   ! re-initialize message
@@ -118,7 +118,7 @@ contains
   message=trim(message)//trim(mpar_meta(iVar)%varName)//'/'
   ! write data
   ncid  = mpar_meta(iVar)%ncFilID(modelTime)
-  varid = mpar_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1)
+  varid = mpar_meta(iVar)%ncVarID(modelTime,iLookStat%inst)
   err = nf90_put_var(ncid,varid,(/mpar_data%var(iVar)/),start=(/iHRU/),count=(/1/))
   call netcdf_err(err,message); if (err/=0) return
   ! re-initialize message
@@ -133,7 +133,7 @@ contains
   message=trim(message)//trim(bpar_meta(iVar)%varName)//'/'
   ! write data
   ncid  = bpar_meta(iVar)%ncFilID(modelTime)
-  varid = bpar_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1)
+  varid = bpar_meta(iVar)%ncVarID(modelTime,iLookStat%inst)
   err = nf90_put_var(ncid,varid,(/bpar_data%var(iVar)/),start=(/1/),count=(/1/))
   call netcdf_err(err,message); if (err/=0) return
   ! re-initialize message
@@ -179,7 +179,7 @@ contains
  if (iHRU.eq.1) then
   message = trim(message)//'writeTime/'
   ncid  = forc_meta(iLookForce%time)%ncFilID(iFreq)
-  varid = forc_meta(iLookForce%time)%ncVarID(iFreq,iLookStat%inst,1)
+  varid = forc_meta(iLookForce%time)%ncVarID(iFreq,iLookStat%inst)
   err = nf90_put_var(ncid,varid,(/dtime/),start=(/iStep/),count=(/1/))
   call netcdf_err(err,message); if (err/=0) return
   message="f-writeForce/"
@@ -192,7 +192,7 @@ contains
   do iStat = 1,maxVarStat 
    if (.not.forc_meta(iVar)%statFlg(iFreq,iStat)) cycle ! check that the variable is desired
    ncid  = forc_meta(ivar)%ncFilID(iFreq)
-   varid = forc_meta(ivar)%ncVarID(iFreq,iStat,1)
+   varid = forc_meta(ivar)%ncVarID(iFreq,iStat)
    err = nf90_put_var(ncid,varid,(/forc_stat(iHRU,iFreq)%var(iVar)%dat(iStat)/),start=(/iHRU,iStep/),count=(/1,1/))
    call netcdf_err(err,message); if (err/=0) return
   enddo  ! iStat 
@@ -262,7 +262,7 @@ contains
   message=trim(message)//trim(indx_meta(iVar)%varName)//'/' ! initialize message
   if (.not.indx_meta(iVar)%statFlg(modelTime,iLookStat%inst)) cycle  ! check that the variable is desired
   ncid  = indx_meta(iVar)%ncFilID(modelTime)
-  varid = indx_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1)
+  varid = indx_meta(iVar)%ncVarID(modelTime,iLookStat%inst)
   err = nf90_put_var(ncid,varid,indx_data%var(iVar)%dat,start=(/iHRU,iStep/),count=(/1,1/))
   call netcdf_err(err,message); if (err/=0) return
   message="f-writeModel/"
@@ -276,13 +276,13 @@ contains
    do iStat=1,maxVarStat 
     if (.not.mvar_meta(iVar)%statFlg(iFreq,iStat)) cycle
     ncid  = mvar_meta(iVar)%ncFilID(iFreq)
-    varid = mvar_meta(iVar)%ncVarID(iFreq,iStat,1)
+    varid = mvar_meta(iVar)%ncVarID(iFreq,iStat)
     err = nf90_put_var(ncid,varid,(/mvar_stat(iHRU,iFreq)%var(iVar)%dat(iStat)/),start=(/iHRU,iStep/),count=(/1,1/))   
    enddo ! iStat
   else
    if (.not.mvar_meta(iVar)%statFlg(iFreq,iLookStat%inst)) cycle
    ncid  = mvar_meta(ivar)%ncFilID(modelTime)
-   varid = mvar_meta(ivar)%ncVarID(modelTime,iLookStat%inst,1)
+   varid = mvar_meta(ivar)%ncVarID(modelTime,iLookStat%inst)
    select case(mvar_meta(iVar)%varType)
     case(iLookVarType%wLength)
      err = nf90_put_var(ncid,varid,mvar_data%var(iVar)%dat,start=(/iHRU,1,iStep/),count=(/1,maxSpectral,1/))       
@@ -343,7 +343,7 @@ contains
   if ((bvar_meta(iVar)%varType.eq.iLookVarType%routing).and.(iStep.eq.1)) then 
    if (.not.bvar_meta(iVar)%statFlg(iFreq,iLookStat%inst)) cycle
    ncid  = bvar_meta(iVar)%ncFilID(modelTime)
-   varid = bvar_meta(iVar)%ncVarID(modelTime,iLookStat%inst,1)
+   varid = bvar_meta(iVar)%ncVarID(modelTime,iLookStat%inst)
    err = nf90_put_var(ncid,varid,(/bvar_data%var(iVar)%dat(iLookStat%inst)/),start=(/1/),count=(/1000/))
    call netcdf_err(err,message); if (err/=0) return
    cycle
@@ -351,7 +351,7 @@ contains
   message="f-writeBasin/"
   do iStat = 1,maxVarStat 
    ncid  = bvar_meta(iVar)%ncFilID(iFreq)
-   varid = bvar_meta(iVar)%ncVarID(iFreq,iStat,1)
+   varid = bvar_meta(iVar)%ncVarID(iFreq,iStat)
    if (.not.bvar_meta(iVar)%statFlg(iFreq,iStat)) cycle
    if (bvar_meta(iVar)%varType.eq.iLookVarType%scalarv) then
     err = nf90_put_var(ncid,varid,(/bvar_stat(iFreq)%var(iVar)%dat(iStat)/),start=(/iStep/),count=(/1/)) 
@@ -410,7 +410,7 @@ contains
     tdata(iLay) = intg_stat(iHRU,iFreq,iLay)%var(iVar)%dat(iStat) 
    enddo
    ncid  = intg_meta(iVar)%ncFilID(iFreq)
-   varid = intg_meta(iVar)%ncVarID(iFreq,iStat,1)
+   varid = intg_meta(iVar)%ncVarID(iFreq,iStat)
    err = nf90_put_var(ncid,varid,(/tdata/),start=(/iHRU,1,iStep/),count=(/1,nLayers,1/)) 
    call netcdf_err(err,message)
    if (err/=0) then; message=trim(message)//trim(intg_meta(iVar)%varName)//'/'; return; endif
@@ -418,21 +418,6 @@ contains
  enddo  ! iVar 
  deallocate(tdata)
 
-! ! loop through integrated variables
-! ! ----------------------------
-! do iVar = 1,maxVarIntg
-!  do iStat = 1,maxVarStat 
-!   if (.not.intg_meta(iVar)%statFlg(iFreq,iStat)) cycle
-!   do iLay = 1,nLayers
-!    ncid  = intg_meta(iVar)%ncFilID(iFreq)
-!    varid = intg_meta(iVar)%ncVarID(iFreq,iStat,iLay)
-!    err = nf90_put_var(ncid,varid,(/intg_stat(iHRU,iFreq,iLay)%var(iVar)%dat(iStat)/),start=(/iHRU,1,iStep/),count=(/1,nLayers,1/)) 
-!    call netcdf_err(err,message)
-!    if (err/=0) then; message=trim(message)//trim(intg_meta(iVar)%varName)//'/'; return; endif
-!   enddo  ! iLay 
-!  enddo  ! iStat 
-! enddo  ! iVar 
-!
  return
  end subroutine writeInteg
 
