@@ -235,7 +235,7 @@ contains
  USE data_struc, only:intg_meta    ! metadata structure for vertically integrated variable
  USE data_struc, only:intg_stat    ! stat data structure for vertically integrated variable
  USE data_struc, only:indx_data    ! need the number of soil layers from here
- USE data_struc, only:nFreq,outFreq! output frequencies
+ USE data_struc, only:nFreq        ! output frequencies
  USE data_struc, only:ix_soil,ix_snow ! named variable to identify a soil or snow layer
  ! lookup structures
  USE var_lookup, only:maxVarForc   ! number of forcing variables
@@ -277,15 +277,15 @@ contains
   ! model variables
   do iVar = 1,maxVarMvar
    tdata = mvar_data%var(iVar)%dat(1)
-   call calc_stats(mvar_meta(iVar),mvar_stat(iHRU,iFreq)%var(iVar),tdata,outFreq(iFreq),iStep,err,cmessage)  
+   call calc_stats(mvar_meta(iVar),mvar_stat(iHRU,iFreq)%var(iVar),tdata,iFreq,iStep,err,cmessage)  
    if(err/=0)then; message=trim(message)//trim(cmessage)//"Mvar";return; endif  
   enddo
 
   ! forcing variables
   do iVar = 1,maxVarForc 
    tdata = forc_data%var(iVar) 
-   call calc_stats(forc_meta(iVar),forc_stat(iHRU,iFreq)%var(iVar),tdata,outFreq(iFreq),iStep,err,cmessage) 
-   if(err/=0)then; message=trim(message)//trim(cmessage)//"Forc";return; endif        
+   call calc_stats(forc_meta(iVar),forc_stat(iHRU,iFreq)%var(iVar),tdata,iFreq,iStep,err,cmessage) 
+   if(err/=0)then; message=trim(message)//trim(cmessage)//"Forc";return; endif      
   enddo
 
   ! vertically integrated variables
@@ -300,11 +300,11 @@ contains
      else
       tdata = 0
      endif
-     call calc_stats(intg_meta(iVar),intg_stat(iHRU,iFreq,1)%var(iVar),tdata,outFreq(iFreq),iStep,err,cmessage)
+     call calc_stats(intg_meta(iVar),intg_stat(iHRU,iFreq,1)%var(iVar),tdata,iFreq,iStep,err,cmessage)
      if(err/=0)then; message=trim(message)//trim(cmessage)//"Forc";return; endif         
      do iLay = 1,nSoil
       tdata = mvar_data%var(intg_meta(iVar)%mvarID)%dat(nSnow-1+iLay)
-      call calc_stats(intg_meta(iVar),intg_stat(iHRU,iFreq,1+iLay)%var(iVar),tdata,outFreq(iFreq),iStep,err,cmessage)
+      call calc_stats(intg_meta(iVar),intg_stat(iHRU,iFreq,1+iLay)%var(iVar),tdata,iFreq,iStep,err,cmessage)
       if(err/=0)then; message=trim(message)//trim(cmessage)//"Forc";return; endif         
      enddo
 
@@ -315,14 +315,14 @@ contains
      else
       tdata = 0
      endif
-     call calc_stats(intg_meta(iVar),intg_stat(iHRU,iFreq,1)%var(iVar),tdata,outFreq(iFreq),iStep,err,cmessage)
+     call calc_stats(intg_meta(iVar),intg_stat(iHRU,iFreq,1)%var(iVar),tdata,iFreq,iStep,err,cmessage)
      if(err/=0)then; message=trim(message)//trim(cmessage)//"Forc";return; endif         
 
     ! midpoint in soil only
     case (iLookVarType%midSoil)
      do iLay = 1,nSoil
       tdata = mvar_data%var(intg_meta(iVar)%mvarID)%dat(iLay)
-      call calc_stats(intg_meta(iVar),intg_stat(iHRU,iFreq,1+iLay)%var(iVar),tdata,outFreq(iFreq),iStep,err,cmessage)
+      call calc_stats(intg_meta(iVar),intg_stat(iHRU,iFreq,1+iLay)%var(iVar),tdata,iFreq,iStep,err,cmessage)
       if(err/=0)then; message=trim(message)//trim(cmessage)//"Forc";return; endif         
      enddo
    endselect ! midSoil, midSnow, midToto
@@ -343,7 +343,7 @@ contains
  USE data_struc, only:bvar_meta    ! metadata structure for basin vars 
  USE data_struc, only:bvar_data    ! timeste data structure for basin vars
  USE data_struc, only:bvar_stat    ! stat data structure for basin vars
- USE data_struc, only:nFreq,outFreq! number of output frequencies
+ USE data_struc, only:nFreq        ! number of output frequencies
  ! lookup structures
  USE var_lookup, only:maxVarBvar   ! number of basin variables
  ! structures of named variables
@@ -367,7 +367,7 @@ contains
  do iFreq = 1,nFreq
   do iVar = 1,maxVarBvar
    tdata = bvar_data%var(iVar)%dat(1)   
-   call calc_stats(bvar_meta(iVar),bvar_stat(iFreq)%var(iVar),tdata,outFreq(iFreq),iStep,err,cmessage)  
+   call calc_stats(bvar_meta(iVar),bvar_stat(iFreq)%var(iVar),tdata,iFreq,iStep,err,cmessage)  
    if(err/=0)then; message=trim(message)//trim(cmessage);return; endif     
   enddo
  enddo
@@ -432,7 +432,7 @@ contains
  ! ---------------------------------------------
  ! Calculate each statistic that is requested by user
  ! ---------------------------------------------
- do iStat = 1,maxVarStat                          ! loop through output statistics
+ do iStat = 1,maxVarStat                           ! loop through output statistics
   if (.not.meta%statFlg(iFreq,iStat)) cycle        ! do not bother if output flag is off
   if (meta%varType.ne.iLookVarType%scalarv) cycle  ! only calculate stats for scalars 
   select case(iStat)                               ! act depending on the statistic 
