@@ -55,17 +55,13 @@ contains
  ! initialize error control
  err=0; message='calcStats/'
 
- do iVar = 1,size(meta)                             ! model variables
+ do iVar = 1,size(meta) ! model variables
 
   ! don't do anything if var is not requested
   if (meta(iVar)%outFreq<0) cycle
-  
+
   ! only treat stats of scalars - all others handled separately
   if (meta(iVar)%varType==iLookVarType%outstat) then
-
-   ! don't do anything if var is not requested
-   ! WHY is this needed when included above?
-   if (meta(iVar)%outFreq<0) cycle
 
    ! index into parent structure
    pVar = meta(iVar)%ixParent
