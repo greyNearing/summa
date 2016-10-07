@@ -1622,16 +1622,18 @@ contains
 
 ! Solar radiation: absorbed & reflected by the ground and canopy
 
-  CALL  RADIATION (VEGTYP  ,IST     ,ISC     ,ICE     ,NSOIL   , & !in 
-                   SNEQVO  ,SNEQV   ,DT      ,COSZ    ,SNOWH   , & !in
-                   TG      ,TV      ,FSNO    ,QSNOW   ,FWET    , & !in
-                   ELAI    ,ESAI    ,SMC     ,SOLAD   ,SOLAI   , & !in
-                   FVEG    ,ILOC    ,JLOC    ,                   & !in
-                   ALBOLD  ,TAUSS   ,                            & !inout
-                   FSUN    ,LAISUN  ,LAISHA  ,PARSUN  ,PARSHA  , & !out
-                   SAV     ,SAG     ,FSR     ,FSA     ,FSRV    , & 
-                   FSRG    ,BGAP    ,WGAP    )            !out
+  stop 123456
 
+!  CALL  RADIATION (VEGTYP  ,IST     ,ISC     ,ICE     ,NSOIL   , & !in 
+!                   SNEQVO  ,SNEQV   ,DT      ,COSZ    ,SNOWH   , & !in
+!                   TG      ,TV      ,FSNO    ,QSNOW   ,FWET    , & !in
+!                   ELAI    ,ESAI    ,SMC     ,SOLAD   ,SOLAI   , & !in
+!                   FVEG    ,ILOC    ,JLOC    ,                   & !in
+!                   ALBOLD  ,TAUSS   ,                            & !inout
+!                   FSUN    ,LAISUN  ,LAISHA  ,PARSUN  ,PARSHA  , & !out
+!                   SAV     ,SAG     ,FSR     ,FSA     ,FSRV    , & 
+!                   FSRG    ,BGAP    ,WGAP    )            !out
+!
 ! vegetation and ground emissivity
 
      EMV = 1. - EXP(-(ELAI+ESAI)/1.0)
@@ -2128,15 +2130,16 @@ contains
 
   end subroutine TDFCND
 ! ==================================================================================================
-  SUBROUTINE RADIATION (VEGTYP  ,IST     ,ISC     ,ICE     ,NSOIL   , & !in
-                        SNEQVO  ,SNEQV   ,DT      ,COSZ    ,SNOWH   , & !in
-                        TG      ,TV      ,FSNO    ,QSNOW   ,FWET    , & !in
-                        ELAI    ,ESAI    ,SMC     ,SOLAD   ,SOLAI   , & !in
-                        FVEG    ,ILOC    ,JLOC    ,                   & !in
-                        ALBOLD  ,TAUSS   ,                            & !inout
-                        FSUN    ,LAISUN  ,LAISHA  ,PARSUN  ,PARSHA  , & !out
-                        SAV     ,SAG     ,FSR     ,FSA     ,FSRV    , &
-                        FSRG    ,BGAP    ,WGAP)            !out
+  SUBROUTINE RADIATION (VEGTYP    ,IST       ,ICE        ,NSOIL     ,            & !in
+                        SNEQVO    ,SNEQV     ,DT         ,COSZ      ,SNOWH     , & !in
+                        TG        ,TV        ,FSNO       ,QSNOW     ,FWET      , & !in
+                        ELAI      ,ESAI      ,SMC        ,SOLAD     ,SOLAI     , & !in
+                        FVEG      ,ILOC      ,JLOC       ,                       & !in
+                        ALBSATVIS ,ALBSATNIR ,ALBDRYVIS  ,ALBDRYNIR ,            & !in
+                        ALBOLD    ,TAUSS     ,                                   & !inout
+                        FSUN      ,LAISUN    ,LAISHA     ,PARSUN    ,PARSHA    , & !out
+                        SAV       ,SAG       ,FSR        ,FSA       ,FSRV      , &
+                        FSRG      ,BGAP      ,WGAP)                                !out
 ! --------------------------------------------------------------------------------------------------
   IMPLICIT NONE
 ! --------------------------------------------------------------------------------------------------
@@ -2145,7 +2148,6 @@ contains
   INTEGER, INTENT(IN)                  :: JLOC
   INTEGER, INTENT(IN)                  :: VEGTYP !vegetation type
   INTEGER, INTENT(IN)                  :: IST    !surface type
-  INTEGER, INTENT(IN)                  :: ISC    !soil color type (1-lighest; 8-darkest)
   INTEGER, INTENT(IN)                  :: ICE    !ice (ice = 1)
   INTEGER, INTENT(IN)                  :: NSOIL  !number of soil layers
 
@@ -2165,6 +2167,10 @@ contains
   REAL, DIMENSION(1:2)    , INTENT(IN) :: SOLAI  !incoming diffuse solar radiation (w/m2)
   REAL, INTENT(IN)                     :: FSNO   !snow cover fraction (-)
   REAL, INTENT(IN)                     :: FVEG   !green vegetation fraction [0.0-1.0]
+  REAL, INTENT(IN)                     :: ALBSATVIS ! visible saturated soil abledo
+  REAL, INTENT(IN)                     :: ALBSATNIR ! infrared dry soil abledo
+  REAL, INTENT(IN)                     :: ALBDRYVIS ! visible saturated soil abledo
+  REAL, INTENT(IN)                     :: ALBDRYNIR ! infrared dry soil abledo
 
 ! inout
   REAL,                  INTENT(INOUT) :: ALBOLD !snow albedo at last time step (CLASS type)
@@ -2216,15 +2222,16 @@ contains
 
 ! surface abeldo
 
-   CALL ALBEDO (VEGTYP ,IST    ,ISC    ,ICE    ,NSOIL  , & !in
-                DT     ,COSZ   ,FAGE   ,ELAI   ,ESAI   , & !in
-                TG     ,TV     ,SNOWH  ,FSNO   ,FWET   , & !in
-                SMC    ,SNEQVO ,SNEQV  ,QSNOW  ,FVEG   , & !in
-                ILOC   ,JLOC   ,                         & !in
-                ALBOLD ,TAUSS                          , & !inout
-                ALBGRD ,ALBGRI ,ALBD   ,ALBI   ,FABD   , & !out
-                FABI   ,FTDD   ,FTID   ,FTII   ,FSUN   , & !)   !out
-                FREVI  ,FREVD   ,FREGD ,FREGI  ,BGAP   , & !inout
+   CALL ALBEDO (VEGTYP    ,IST       ,ICE        ,NSOIL     ,         & !in
+                DT        ,COSZ      ,FAGE       ,ELAI      ,ESAI   , & !in
+                TG        ,TV        ,SNOWH      ,FSNO      ,FWET   , & !in
+                SMC       ,SNEQVO    ,SNEQV      ,QSNOW     ,FVEG   , & !in
+                ILOC      ,JLOC      ,                                & !in
+                ALBSATVIS ,ALBSATNIR ,ALBDRYVIS  ,ALBDRYNIR ,         & !in
+                ALBOLD    ,TAUSS                            ,         & !inout
+                ALBGRD    ,ALBGRI    ,ALBD       ,ALBI      ,FABD   , & !out
+                FABI      ,FTDD      ,FTID       ,FTII      ,FSUN   , & !!out
+                FREVI     ,FREVD     ,FREGD      ,FREGI     ,BGAP   , & !inout
                 WGAP)
 
 ! surface radiation
@@ -2251,16 +2258,27 @@ contains
   END SUBROUTINE RADIATION
 ! ==================================================================================================
 ! --------------------------------------------------------------------------------------------------
-  SUBROUTINE ALBEDO (VEGTYP ,IST    ,ISC    ,ICE    ,NSOIL  , & !in
-                     DT     ,COSZ   ,FAGE   ,ELAI   ,ESAI   , & !in
-                     TG     ,TV     ,SNOWH  ,FSNO   ,FWET   , & !in
-                     SMC    ,SNEQVO ,SNEQV  ,QSNOW  ,FVEG   , & !in
-                     ILOC   ,JLOC   ,                         & !in
-                     ALBOLD ,TAUSS                          , & !inout
-                     ALBGRD ,ALBGRI ,ALBD   ,ALBI   ,FABD   , & !out
-                     FABI   ,FTDD   ,FTID   ,FTII   ,FSUN   , & !out
-                     FREVI  ,FREVD  ,FREGD  ,FREGI  ,BGAP   , & !out
+  SUBROUTINE ALBEDO (VEGTYP    ,IST       ,ICE        ,NSOIL     ,         & !in
+                     DT        ,COSZ      ,FAGE       ,ELAI      ,ESAI   , & !in
+                     TG        ,TV        ,SNOWH      ,FSNO      ,FWET   , & !in
+                     SMC       ,SNEQVO    ,SNEQV      ,QSNOW     ,FVEG   , & !in
+                     ILOC      ,JLOC      ,                                & !in
+                     ALBSATVIS ,ALBSATNIR ,ALBDRYVIS  ,ALBDRYNIR ,         & !in
+                     ALBOLD    ,TAUSS                            ,         & !inout
+                     ALBGRD    ,ALBGRI    ,ALBD       ,ALBI      ,FABD   , & !out
+                     FABI      ,FTDD      ,FTID       ,FTII      ,FSUN   , & !!out
+                     FREVI     ,FREVD     ,FREGD      ,FREGI     ,BGAP   , & !inout
                      WGAP)
+  !SUBROUTINE ALBEDO (VEGTYP ,IST    ,ICE    ,NSOIL  , & !in
+  !                   DT     ,COSZ   ,FAGE   ,ELAI   ,ESAI   , & !in
+  !                   TG     ,TV     ,SNOWH  ,FSNO   ,FWET   , & !in
+  !                   SMC    ,SNEQVO ,SNEQV  ,QSNOW  ,FVEG   , & !in
+  !                   ILOC   ,JLOC   ,                         & !in
+  !                   ALBOLD ,TAUSS                          , & !inout
+  !                   ALBGRD ,ALBGRI ,ALBD   ,ALBI   ,FABD   , & !out
+  !                   FABI   ,FTDD   ,FTID   ,FTII   ,FSUN   , & !out
+  !                   FREVI  ,FREVD  ,FREGD  ,FREGI  ,BGAP   , & !out
+  !                   WGAP)
 
 ! --------------------------------------------------------------------------------------------------
 ! surface albedos. also fluxes (per unit incoming direct and diffuse
@@ -2277,7 +2295,6 @@ contains
   INTEGER,                  INTENT(IN)  :: NSOIL  !number of soil layers
   INTEGER,                  INTENT(IN)  :: VEGTYP !vegetation type
   INTEGER,                  INTENT(IN)  :: IST    !surface type
-  INTEGER,                  INTENT(IN)  :: ISC    !soil color type (1-lighest; 8-darkest)
   INTEGER,                  INTENT(IN)  :: ICE    !ice (ice = 1)
 
   REAL,                     INTENT(IN)  :: DT     !time step [sec]
@@ -2294,6 +2311,10 @@ contains
   REAL,                     INTENT(IN)  :: SNEQV  !snow mass (mm)
   REAL,                     INTENT(IN)  :: FVEG   !green vegetation fraction [0.0-1.0]
   REAL, DIMENSION(1:NSOIL), INTENT(IN)  :: SMC    !volumetric soil water (m3/m3)
+  REAL, INTENT(IN)                      :: ALBSATVIS ! visible saturated soil abledo
+  REAL, INTENT(IN)                      :: ALBSATNIR ! infrared dry soil abledo
+  REAL, INTENT(IN)                      :: ALBDRYVIS ! visible saturated soil abledo
+  REAL, INTENT(IN)                      :: ALBDRYNIR ! infrared dry soil abledo
 
 ! inout
   REAL,                  INTENT(INOUT)  :: ALBOLD !snow albedo at last time step (CLASS type)
@@ -2391,9 +2412,10 @@ contains
 
 ! ground surface albedo
 
-  CALL GROUNDALB (NSOIL   ,NBAND   ,ICE     ,IST     ,ISC     , & !in
+  CALL GROUNDALB (NSOIL   ,NBAND   ,ICE     ,IST     ,          & !in
                   FSNO    ,SMC     ,ALBSND  ,ALBSNI  ,COSZ    , & !in
                   TG      ,ILOC    ,JLOC    ,                   & !in
+                  ALBSATVIS ,ALBSATNIR ,ALBDRYVIS  ,ALBDRYNIR , & !in
                   ALBGRD  ,ALBGRI  )                              !out
 
 
@@ -2691,10 +2713,10 @@ contains
 
 ! ---------------------------------------------------------------------------------------------
 ! zero albedos for all points
-
-        ALBSND(1: NBAND) = 0.
-        ALBSNI(1: NBAND) = 0.
-
+!
+!        ALBSND(1: NBAND) = 0.
+!        ALBSNI(1: NBAND) = 0.
+!
 ! when cosz > 0
 
          ALB = 0.55 + (ALBOLD-0.55) * EXP(-0.01*DT/3600.)
@@ -2715,9 +2737,10 @@ contains
   END SUBROUTINE SNOWALB_CLASS
 ! ==================================================================================================
 ! --------------------------------------------------------------------------------------------------
-  SUBROUTINE GROUNDALB (NSOIL   ,NBAND   ,ICE     ,IST     ,ISC     , & !in
+  SUBROUTINE GROUNDALB (NSOIL   ,NBAND   ,ICE     ,IST     ,          & !in
                         FSNO    ,SMC     ,ALBSND  ,ALBSNI  ,COSZ    , & !in
                         TG      ,ILOC    ,JLOC    ,                   & !in
+                        ALBSATVIS ,ALBSATNIR ,ALBDRYVIS  ,ALBDRYNIR , & !in
                         ALBGRD  ,ALBGRI  )                              !out
 ! --------------------------------------------------------------------------------------------------
   USE NOAHMP_RAD_PARAMETERS
@@ -2732,13 +2755,16 @@ contains
   INTEGER,                  INTENT(IN)  :: NBAND  !number of solar radiation waveband classes
   INTEGER,                  INTENT(IN)  :: ICE    !value of ist for land ice
   INTEGER,                  INTENT(IN)  :: IST    !surface type
-  INTEGER,                  INTENT(IN)  :: ISC    !soil color class (1-lighest; 8-darkest)
   REAL,                     INTENT(IN)  :: FSNO   !fraction of surface covered with snow (-)
   REAL,                     INTENT(IN)  :: TG     !ground temperature (k)
   REAL,                     INTENT(IN)  :: COSZ   !cosine solar zenith angle (0-1)
   REAL, DIMENSION(1:NSOIL), INTENT(IN)  :: SMC    !volumetric soil water content (m3/m3)
   REAL, DIMENSION(1:    2), INTENT(IN)  :: ALBSND !direct beam snow albedo (vis, nir)
   REAL, DIMENSION(1:    2), INTENT(IN)  :: ALBSNI !diffuse snow albedo (vis, nir)
+  REAL, INTENT(IN)                      :: ALBSATVIS ! visible saturated soil abledo
+  REAL, INTENT(IN)                      :: ALBSATNIR ! infrared dry soil abledo
+  REAL, INTENT(IN)                      :: ALBDRYVIS ! visible saturated soil abledo
+  REAL, INTENT(IN)                      :: ALBDRYNIR ! infrared dry soil abledo
 
 !output
 
@@ -2756,7 +2782,8 @@ contains
   DO IB = 1, NBAND
         INC = MAX(0.11-0.40*SMC(1), 0.)
         IF (IST .EQ. 1)  THEN                     !soil
-           ALBSOD = MIN(ALBSAT(ISC,IB)+INC,ALBDRY(ISC,IB))
+           IF (IB .EQ. 1) ALBSOD = MIN(ALBSATVIS+INC,ALBDRYVIS)
+           IF (IB .EQ. 2) ALBSOD = MIN(ALBSATNIR+INC,ALBDRYNIR)
            ALBSOI = ALBSOD
         ELSE IF (TG .GT. TFRZ) THEN               !unfrozen lake, wetland
            ALBSOD = 0.06/(MAX(0.01,COSZ)**1.7 + 0.15)
@@ -2768,10 +2795,10 @@ contains
 
 ! increase desert and semi-desert albedos
 
-        IF (IST .EQ. 1 .AND. ISC .EQ. 9) THEN
-           ALBSOD = ALBSOD + 0.10
-           ALBSOI = ALBSOI + 0.10
-        end if
+!        IF (IST .EQ. 1 .AND. ISC .EQ. 9) THEN
+!           ALBSOD = ALBSOD + 0.10
+!           ALBSOI = ALBSOI + 0.10
+!        end if
 
         ALBGRD(IB) = ALBSOD*(1.-FSNO) + ALBSND(IB)*FSNO
         ALBGRI(IB) = ALBSOI*(1.-FSNO) + ALBSNI(IB)*FSNO

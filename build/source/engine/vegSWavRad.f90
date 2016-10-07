@@ -38,7 +38,6 @@ public::vegSWavRad
 integer(i4b),parameter        :: nBands=2      ! number of spectral bands for shortwave radiation
 ! named variables
 integer(i4b),parameter        :: ist     = 1   ! Surface type:  IST=1 => soil;  IST=2 => lake
-integer(i4b),parameter        :: isc     = 4   ! Soil color type
 integer(i4b),parameter        :: ice     = 0   ! Surface type:  ICE=0 => soil;  ICE=1 => sea-ice
 ! spatial indices
 integer(i4b),parameter        :: iLoc    = 1   ! i-location
@@ -176,7 +175,7 @@ contains
    call radiation(&
                   ! input
                   vegTypeIndex,                       & ! intent(in): vegetation type index
-                  ist, isc, ice,                      & ! intent(in): indices to define surface type, soil color, and ice type (constant)
+                  ist, ice,                           & ! intent(in): indices to define surface type, soil color, and ice type (constant)
                   nSoil,                              & ! intent(in): number of soil layers
                   scalarSWE,                          & ! intent(in): snow water equivalent (kg m-2)
                   snowmassPlusNewsnow,                & ! intent(in): sum of snow mass and new snowfall (kg m-2 [mm])
@@ -195,6 +194,8 @@ contains
                   spectralIncomingDiffuse(1:nBands),  & ! intent(in): incoming diffuse solar radiation in each wave band (w m-2)
                   scalarVegFraction,                  & ! intent(in): vegetation fraction (=1 forces no canopy gaps and open areas in radiation routine)
                   iLoc, jLoc,                         & ! intent(in): spatial location indices
+                  albSatVis, albSatNIR,               & ! intent(in): albedo of saturated soil in each spectral band (-)
+                  albDryVis, albDryNIR,               & ! intent(in): albedo of dry soil in each spectral band (-)
                   ! output
                   scalarSnowAlbedo,                   & ! intent(inout): snow albedo (-)
                   scalarSnowAge,                      & ! intent(inout): non-dimensional snow age (-)
