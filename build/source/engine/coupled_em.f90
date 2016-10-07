@@ -422,6 +422,7 @@ contains
                  nLayers,                      & ! intent(in):    total number of layers
                  computeVegFlux,               & ! intent(in):    logical flag to compute vegetation fluxes (.false. if veg buried by snow)
                  type_data,                    & ! intent(in):    type of vegetation and soil
+                 mpar_data,                    & ! intent(in):    model parameters
                  prog_data,                    & ! intent(inout): model prognostic variables for a local HRU
                  diag_data,                    & ! intent(inout): model diagnostic variables for a local HRU
                  flux_data,                    & ! intent(inout): model flux variables

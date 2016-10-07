@@ -273,6 +273,10 @@ contains
  mpar_meta(iLookPARAM%zmaxLayer2_upper)      = var_info('zmaxLayer2_upper'      , 'maximum layer depth for the 2nd layer when > 2 layers'            , 'm'               , get_ixVarType('scalarv'), lFalseArry, integerMissing, iMissArry)
  mpar_meta(iLookPARAM%zmaxLayer3_upper)      = var_info('zmaxLayer3_upper'      , 'maximum layer depth for the 3rd layer when > 3 layers'            , 'm'               , get_ixVarType('scalarv'), lFalseArry, integerMissing, iMissArry)
  mpar_meta(iLookPARAM%zmaxLayer4_upper)      = var_info('zmaxLayer4_upper'      , 'maximum layer depth for the 4th layer when > 4 layers'            , 'm'               , get_ixVarType('scalarv'), lFalseArry, integerMissing, iMissArry)
+ mpar_meta(iLookPARAM%albSatVis)             = var_info('albSatVis'             , 'saturated soil albedo in visible wavelengths'                     , '-'               , get_ixVarType('scalarv'), lFalseArry, integerMissing, iMissArry)
+ mpar_meta(iLookPARAM%albDryVis)             = var_info('albDryVis'             , 'dry soil albedo in visible wavelengths'                           , '-'               , get_ixVarType('scalarv'), lFalseArry, integerMissing, iMissArry)
+ mpar_meta(iLookPARAM%albSatNIR)             = var_info('albSatNIR'             , 'saturated soil albedo in near infrared wavelengths'               , '-'               , get_ixVarType('scalarv'), lFalseArry, integerMissing, iMissArry)
+ mpar_meta(iLookPARAM%albDryNIR)             = var_info('albDryNIR'             , 'dry soil albedo in near infrared wavelengths'                     , '-'               , get_ixVarType('scalarv'), lFalseArry, integerMissing, iMissArry)
 
  ! -----
  ! * basin parameter data...

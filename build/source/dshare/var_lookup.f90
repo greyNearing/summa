@@ -266,6 +266,10 @@ MODULE var_lookup
   integer(i4b)    :: f_impede              = integerMissing    ! ice impedence factor (-)
   integer(i4b)    :: soilIceScale          = integerMissing    ! scaling factor for depth of soil ice, used to get frozen fraction (m)
   integer(i4b)    :: soilIceCV             = integerMissing    ! CV of depth of soil ice, used to get frozen fraction (-)
+  integer(i4b)    :: albSatVis             = integerMissing    ! saturated soil albedo - visible spectrum 
+  integer(i4b)    :: albSatNIR             = integerMissing    ! saturated soil albedo - nir spectrum 
+  integer(i4b)    :: albDryVis             = integerMissing    ! dry soil albedo - visible spectrum 
+  integer(i4b)    :: albDryNIR             = integerMissing    ! dry soil albedo - nir spectrum 
   ! algorithmic control parameters
   integer(i4b)    :: minwind               = integerMissing    ! minimum wind speed (m s-1)
   integer(i4b)    :: minstep               = integerMissing    ! minimum length of the time step
@@ -760,7 +764,7 @@ MODULE var_lookup
                                                                         121,122,123,124,125,126,127,128,129,130,&
                                                                         131,132,133,134,135,136,137,138,139,140,&
                                                                         141,142,143,144,145,146,147,148,149,150,&
-                                                                        151,152,153,154)
+                                                                        151,152,153,154,155,156,157,158)
 
  ! named variables: model prognostic (state) variables
  type(iLook_prog),   public,parameter  :: iLookPROG     =iLook_prog    (  1,  2,  3,  4,  5,  6,  7,  8,  9, 10,&

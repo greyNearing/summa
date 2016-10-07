@@ -346,6 +346,10 @@ contains
   case('f_impede'                 ); get_ixparam = iLookPARAM%f_impede               ! ice impedence factor (-)
   case('soilIceScale'             ); get_ixparam = iLookPARAM%soilIceScale           ! scaling factor for depth of soil ice, used to get frozen fraction (m)
   case('soilIceCV'                ); get_ixparam = iLookPARAM%soilIceCV              ! CV of depth of soil ice, used to get frozen fraction (-)
+  case('albSatVis'                ); get_ixparam = iLookPARAM%albSatVis
+  case('albSatNIR'                ); get_ixparam = iLookPARAM%albSatNIR
+  case('albDryVis'                ); get_ixparam = iLookPARAM%albDryVis
+  case('albDryNIR'                ); get_ixparam = iLookPARAM%albDryNIR
   ! algorithmic control parameters
   case('minwind'                  ); get_ixparam = iLookPARAM%minwind                ! minimum wind speed (m s-1)
   case('minstep'                  ); get_ixparam = iLookPARAM%minstep                ! minimum length of the time step
